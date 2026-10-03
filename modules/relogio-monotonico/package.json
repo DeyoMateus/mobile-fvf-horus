@@ -1,0 +1,20 @@
+{
+  "name": "relogio-monotonico",
+  "version": "0.1.0",
+  "description": "Módulo nativo local (Rodada 88) , expõe o relógio monotônico do aparelho (Android SystemClock.elapsedRealtime / iOS ProcessInfo.systemUptime) para detecção de manipulação manual do relógio de parede entre dois toques de ponto.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "source": "src/index.ts",
+  "license": "UNLICENSED",
+  "private": true,
+  "keywords": [
+    "react-native",
+    "expo",
+    "relogio-monotonico"
+  ],
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

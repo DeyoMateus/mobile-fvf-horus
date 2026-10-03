@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "FVF Hórus - Motorista",
+    "slug": "fvf-horus-motorista",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fvfhorus.motorista",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Usamos a localização para registrar onde cada ponto (início de direção, espera em carga/descarga etc.) foi batido, como prova em caso de auditoria/fiscalização.",
+        "UIBackgroundModes": [
+          "fetch",
+          "location"
+        ],
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Usamos a localização em segundo plano, de forma esparsa e de baixo consumo (só durante o trecho de direção, e só quando o aparelho se move uma distância relevante), para a checagem antifraude que complementa os pontos batidos. É necessária para usar o app."
+      }
+    },
+    "android": {
+      "package": "com.fvfhorus.motorista",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "POST_NOTIFICATIONS",
+        "ACCESS_BACKGROUND_LOCATION",
+        "VIBRATE"
+      ],
+      "minSdkVersion": 23,
+      "edgeToEdge": false
+    },
+    "notification": {
+      "iosDisplayInForeground": true
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-task-manager",
+      "expo-location",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-sqlite",
+      "expo-status-bar"
+    ]
+  }
+}

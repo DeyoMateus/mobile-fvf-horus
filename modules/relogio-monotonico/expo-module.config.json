@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["RelogioMonotonicoModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.relogiomonotonico.RelogioMonotonicoModule"]
+  }
+}

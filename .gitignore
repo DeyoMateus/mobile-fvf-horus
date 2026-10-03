@@ -1,0 +1,38 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+.env
+.env*.local
+
+# Pedido do usuário: nunca versionar documentação interna sigilosa ,
+# regras de negócio, planejamento, dados de seed, pendências, manuais
+# e checklists internos. Casa pelo NOME do arquivo/pasta (em qualquer
+# pasta), então vale como trava mesmo pra arquivo que ainda não existe
+# hoje , qualquer um assim que for criado já nasce fora do git.
+**/*regra-de-negocio*
+**/*regras-de-negocio*
+**/*regra_negocio*
+**/*business-rule*
+**/planejamento/
+**/*planejamento*
+**/roadmap/
+**/*roadmap*
+**/pendencia*/
+**/*pendencia*
+**/*pendência*
+**/manual-interno*
+**/*manual-interno*
+**/checklist*/
+**/*checklist*
+seed.*
+*.seed.*
+*-seed.*
+*_seed.*
+seeds/

@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_API_URL": "http://192.168.0.10:3000" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.seu-dominio.com.br",
+        "EXPO_PUBLIC_SSL_PIN_HOST": "api.seu-dominio.com.br",
+        "EXPO_PUBLIC_SSL_PINS": "sha256/PIN_ATUAL_AQUI,sha256/PIN_DE_BACKUP_AQUI"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.seu-dominio.com.br",
+        "EXPO_PUBLIC_SSL_PIN_HOST": "api.seu-dominio.com.br",
+        "EXPO_PUBLIC_SSL_PINS": "sha256/PIN_ATUAL_AQUI,sha256/PIN_DE_BACKUP_AQUI"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

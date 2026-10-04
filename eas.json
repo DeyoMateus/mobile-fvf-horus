@@ -12,9 +12,9 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.seu-dominio.com.br",
-        "EXPO_PUBLIC_SSL_PIN_HOST": "api.seu-dominio.com.br",
-        "EXPO_PUBLIC_SSL_PINS": "sha256/PIN_ATUAL_AQUI,sha256/PIN_DE_BACKUP_AQUI"
+        "EXPO_PUBLIC_API_URL": "https://portfolio-backend-fvf-horus.zmdxlj.easypanel.host",
+        "EXPO_PUBLIC_SSL_PIN_HOST": "",
+        "EXPO_PUBLIC_SSL_PINS": ""
       }
     },
     "production": {

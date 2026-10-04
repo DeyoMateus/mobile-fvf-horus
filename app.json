@@ -29,7 +29,9 @@
         "RECEIVE_BOOT_COMPLETED",
         "POST_NOTIFICATIONS",
         "ACCESS_BACKGROUND_LOCATION",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "minSdkVersion": 23,
       "edgeToEdge": false
@@ -45,6 +47,11 @@
       "expo-sharing",
       "expo-sqlite",
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "df584df7-b4b5-4b16-b3f5-688361c1da06"
+      }
+    }
   }
 }

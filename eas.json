@@ -7,14 +7,14 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_API_URL": "http://192.168.0.10:3000" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.0.10:3000"
+      }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://portfolio-backend-fvf-horus.zmdxlj.easypanel.host",
-        "EXPO_PUBLIC_SSL_PIN_HOST": "",
-        "EXPO_PUBLIC_SSL_PINS": ""
+        "EXPO_PUBLIC_API_URL": "https://portfolio-backend-fvf-horus.zmdxlj.easypanel.host"
       }
     },
     "production": {

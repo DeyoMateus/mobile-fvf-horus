@@ -28,7 +28,10 @@ import { PerfilMotoristaScreen } from "./src/screens/PerfilMotoristaScreen";
 import { iniciarBanco, ultimoRegistroRelevante } from "./src/storage/db";
 import { iniciarBancoCienciasPendentes } from "./src/storage/db";
 import { iniciarBancoAjustesVistosLocalmente } from "./src/storage/db";
-import { iniciarBancoAlertasVisualizadosPendentes, registrarAlertaVisualizadoPendente } from "./src/storage/db";
+import {
+  iniciarBancoAlertasVisualizadosPendentes,
+  registrarAlertaVisualizadoPendente,
+} from "./src/storage/db";
 import { iniciarBancoAjusteGestor } from "./src/storage/db";
 import {
   limparVinculo,
@@ -564,7 +567,9 @@ function AppInterno() {
         style={{ flex: 1 }}
         behavior={COMPORTAMENTO_TECLADO}
       >
-        {aba === "PONTO" && <RegistrarPontoScreen />}
+        {aba === "PONTO" && (
+          <RegistrarPontoScreen onVerHistorico={() => setAba("HISTORICO")} />
+        )}
         {aba === "HISTORICO" && <HistoricoScreen />}
         {aba === "HORAS" && <HorasScreen />}
         {aba === "ALERTAS" && (

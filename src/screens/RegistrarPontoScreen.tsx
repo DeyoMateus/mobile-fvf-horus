@@ -38,6 +38,7 @@ import {
   salvarAjusteGestorMaisRecenteSeMaisNovo,
   ultimoRegistroRelevante,
   ultimoTipoEventoRelevanteRegistrado,
+  obterRegistroPorIdLocal,
 } from "../storage/db";
 import { listarMeusAjustes } from "../api/tratamentos";
 import {
@@ -132,12 +133,26 @@ function useCronometro(desde: string | null): number | null {
  * neste aparelho, em vez dos 8 tipos de uma vez , evita, por exemplo,
  * apertar "Início de direção" duas vezes seguidas sem nunca fechar.
  */
-export function RegistrarPontoScreen() {
+interface ResultadoPonto {
+  rotulo: string;
+  status: "ENVIADO" | "ERRO" | "PENDENTE";
+  erro?: string | null;
+}
+
+export function RegistrarPontoScreen({
+  onVerHistorico,
+}: {
+  onVerHistorico?: () => void;
+}) {
   const { cores, tema, alternarTema } = useTema();
   const estilos = criarEstilos(cores);
 
   const [observacao, setObservacao] = useState("");
   const [enviando, setEnviando] = useState<TipoEvento | null>(null);
+  // Rodada 140 , janela de resultado depois de bater o ponto.
+  const [resultadoPonto, setResultadoPonto] = useState<ResultadoPonto | null>(
+    null,
+  );
   const [ultimoRelevante, setUltimoRelevante] = useState<TipoEvento | null>(
     () => ultimoTipoEventoRelevanteRegistrado(),
   );
@@ -377,8 +392,9 @@ export function RegistrarPontoScreen() {
       // módulo nativo não estiver disponível, ex.: Expo Go).
       const elapsedRealtimeMs = obterElapsedRealtimeMs();
 
+      const idLocalNovo = Crypto.randomUUID();
       await inserirRegistro({
-        idLocal: Crypto.randomUUID(),
+        idLocal: idLocalNovo,
         tipoEvento,
         timestampEvento: agora,
         latitude: localizacao.latitude ?? null,
@@ -425,14 +441,28 @@ export function RegistrarPontoScreen() {
 
       // Rodada 137 , se o backend rejeitar (ERRO), o estado da tela volta
       // pro último registro VÁLIDO em vez de seguir o ponto rejeitado.
-      void sincronizarFila().finally(() => {
-        setUltimoRelevante(ultimoTipoEventoRelevanteRegistrado());
-        const u = ultimoRegistroRelevante();
-        setDesdeQuando(
-          u && estaEmEstadoComCronometro(u.tipoEvento)
-            ? u.timestampEvento
-            : null,
-        );
+      // Rodada 140 , espera o envio (até 8s, com o "Registrando ponto..."
+      // na tela) pra poder mostrar o resultado de verdade: registrado,
+      // não registrado (com o motivo) ou salvo aguardando internet.
+      await Promise.race([
+        sincronizarFila().catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, 8000)),
+      ]);
+      setUltimoRelevante(ultimoTipoEventoRelevanteRegistrado());
+      const u = ultimoRegistroRelevante();
+      setDesdeQuando(
+        u && estaEmEstadoComCronometro(u.tipoEvento) ? u.timestampEvento : null,
+      );
+      const salvo = await obterRegistroPorIdLocal(idLocalNovo);
+      setResultadoPonto({
+        rotulo: rotuloDoTipo(tipoEvento),
+        status:
+          salvo?.status === "ENVIADO"
+            ? "ENVIADO"
+            : salvo?.status === "ERRO"
+              ? "ERRO"
+              : "PENDENTE",
+        erro: salvo?.ultimoErro ?? null,
       });
       // Sucesso: `enviando` só é liberado no finally, mas o botão desse
       // tipo já some da lista (cascata avança), então não há como
@@ -890,6 +920,54 @@ export function RegistrarPontoScreen() {
               >
                 <Text style={estilos.botaoModalConfirmarTexto}>Confirmar</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={resultadoPonto !== null && enviando === null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResultadoPonto(null)}
+      >
+        <View style={estilos.modalFundo}>
+          <View style={estilos.modalCaixa}>
+            <Text style={estilos.modalTitulo}>
+              {resultadoPonto?.status === "ENVIADO"
+                ? "Ponto registrado"
+                : resultadoPonto?.status === "ERRO"
+                  ? "Ponto NÃO registrado"
+                  : "Ponto salvo no aparelho"}
+            </Text>
+            <Text style={estilos.modalDescricao}>
+              {resultadoPonto?.status === "ENVIADO" &&
+                `"${resultadoPonto.rotulo}" foi registrado com sucesso.`}
+              {resultadoPonto?.status === "ERRO" &&
+                `"${resultadoPonto.rotulo}" não foi aceito: ${resultadoPonto.erro ?? "erro ao processar o registro"}`}
+              {resultadoPonto?.status === "PENDENTE" &&
+                `"${resultadoPonto.rotulo}" ficou guardado e será enviado assim que houver internet.`}
+            </Text>
+            <View style={estilos.modalBotoes}>
+              <TouchableOpacity
+                style={estilos.botaoModalCancelar}
+                onPress={() => setResultadoPonto(null)}
+              >
+                <Text style={estilos.botaoModalCancelarTexto}>Fechar</Text>
+              </TouchableOpacity>
+              {onVerHistorico && (
+                <TouchableOpacity
+                  style={estilos.botaoModalConfirmar}
+                  onPress={() => {
+                    setResultadoPonto(null);
+                    onVerHistorico();
+                  }}
+                >
+                  <Text style={estilos.botaoModalConfirmarTexto}>
+                    Ver no histórico (comprovante)
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>

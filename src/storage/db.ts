@@ -209,6 +209,17 @@ export async function listarRegistros(): Promise<RegistroLocal[]> {
   return Promise.all(linhas.map(paraRegistroLocal));
 }
 
+/** Rodada 140 , lê um registro local pelo idLocal (resultado do toque). */
+export async function obterRegistroPorIdLocal(
+  idLocal: string,
+): Promise<RegistroLocal | null> {
+  const linha = db.getFirstSync<LinhaBruta>(
+    `SELECT * FROM registros_pendentes WHERE idLocal = ?`,
+    [idLocal],
+  );
+  return linha ? paraRegistroLocal(linha) : null;
+}
+
 export async function listarPendentes(): Promise<RegistroLocal[]> {
   const linhas = db.getAllSync<LinhaBruta>(
     `SELECT * FROM registros_pendentes WHERE status IN ('PENDENTE', 'ERRO') ORDER BY rowid ASC`,
@@ -545,10 +556,9 @@ export function listarAlertasVisualizadosPendentes(): LinhaAlertaVisualizadoPend
 }
 
 export function marcarAlertaVisualizadoEnviado(alertaId: string): void {
-  db.runSync(
-    `DELETE FROM alertas_visualizados_pendentes WHERE alertaId = ?`,
-    [alertaId],
-  );
+  db.runSync(`DELETE FROM alertas_visualizados_pendentes WHERE alertaId = ?`, [
+    alertaId,
+  ]);
 }
 
 /**

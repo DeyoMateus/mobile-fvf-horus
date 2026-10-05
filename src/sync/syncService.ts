@@ -1,3 +1,4 @@
+import { AppState } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { enviarLoteRegistros, ErroApi } from "../api/client";
 import {
@@ -203,6 +204,9 @@ export function iniciarSincronizacaoAutomatica(): () => void {
   });
 
   const intervalo = setInterval(() => {
+    // Rodada 151 , bateria: em segundo plano não faz polling; a volta
+    // da rede (NetInfo) e a volta ao primeiro plano já sincronizam.
+    if (AppState.currentState !== "active") return;
     void sincronizarFila();
     void sincronizarCiencias();
     void sincronizarAlertasVisualizados();

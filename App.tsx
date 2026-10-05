@@ -73,7 +73,8 @@ import {
 import { listarMinhasSolicitacoes } from "./src/api/solicitacoesAjuste";
 import { existeDecisaoNaoVista } from "./src/storage/solicitacaoAjusteLocal";
 
-const INTERVALO_POLL_ALERTAS_MS = 20000;
+// Rodada 151 , bateria: 45s (era 20s) e só com o app em primeiro plano.
+const INTERVALO_POLL_ALERTAS_MS = 45000;
 
 /**
  * Ajuste do teclado (pedido do usuário , campos ficavam escondidos
@@ -281,6 +282,11 @@ function AppInterno() {
       if (veioDeAtivo && foiPraFundo && !bloqueioSuprimido()) {
         setDesbloqueado(false);
       }
+      // Rodada 151 , ao voltar pro app, reconcilia os avisos locais
+      // (direção contínua/tempo indefinido) com o relógio confiável.
+      if (proximoEstado === "active" && !veioDeAtivo) {
+        void sincronizarLembretesDeJornada();
+      }
       estadoAppAnterior.current = proximoEstado;
     });
     return () => assinatura.remove();
@@ -376,7 +382,9 @@ function AppInterno() {
 
     void verificarAlertas();
     const id = setInterval(
-      () => void verificarAlertas(),
+      () => {
+        if (AppState.currentState === "active") void verificarAlertas();
+      },
       INTERVALO_POLL_ALERTAS_MS,
     );
     return () => {
@@ -412,7 +420,9 @@ function AppInterno() {
 
     void verificarAjustes();
     const id = setInterval(
-      () => void verificarAjustes(),
+      () => {
+        if (AppState.currentState === "active") void verificarAjustes();
+      },
       INTERVALO_POLL_ALERTAS_MS,
     );
     return () => {

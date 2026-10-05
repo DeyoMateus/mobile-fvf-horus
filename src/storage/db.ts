@@ -213,6 +213,30 @@ export async function listarRegistros(): Promise<RegistroLocal[]> {
   return Promise.all(linhas.map(paraRegistroLocal));
 }
 
+/**
+ * Rodada 151 , eventos da jornada atual (a partir do último
+ * INICIO_JORNADA, ou das últimas 48h se não houver), na ordem real de
+ * toque. Só campos não sensíveis , usado pelos avisos locais de direção
+ * contínua (ver `domain/direcaoContinua.ts`).
+ */
+export function listarEventosDaJornadaAtual(): {
+  tipoEvento: TipoEvento;
+  timestampEvento: string;
+}[] {
+  const linhas = db.getAllSync<{
+    tipoEvento: TipoEvento;
+    timestampEvento: string;
+  }>(
+    `SELECT tipoEvento, timestampEvento FROM registros_pendentes WHERE status <> 'ERRO' ORDER BY rowid DESC LIMIT 200`,
+  );
+  const recentes: { tipoEvento: TipoEvento; timestampEvento: string }[] = [];
+  for (const l of linhas) {
+    recentes.push(l);
+    if (l.tipoEvento === "INICIO_JORNADA") break;
+  }
+  return recentes.reverse();
+}
+
 /** Rodada 140 , lê um registro local pelo idLocal (resultado do toque). */
 export async function obterRegistroPorIdLocal(
   idLocal: string,

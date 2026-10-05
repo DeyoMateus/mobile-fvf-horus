@@ -1,6 +1,13 @@
 import { Platform } from "react-native";
 import { estaEmTempoIndefinido } from "../domain/regrasJornada";
 import {
+  direcaoContinuaEmCurso,
+  DIRECAO_CONTINUA_ATENCAO_MIN,
+  DIRECAO_CONTINUA_CRITICO_MIN,
+  DIRECAO_CONTINUA_PREVIO_MIN,
+} from "../domain/direcaoContinua";
+import {
+  listarEventosDaJornadaAtual,
   ultimoRegistroRelevante,
   ultimoTipoEventoRelevanteRegistrado,
 } from "../storage/db";
@@ -24,11 +31,94 @@ const LIMIARES = [
   { id: "tempo-indefinido-30", minutos: 30, critico: true },
 ] as const;
 
+/**
+ * Rodada 151 , avisos LOCAIS de direção contínua (4h30, 5h, 5h30):
+ * funcionam com o app fechado e sem internet. Canal novo (o Android não
+ * deixa mudar som/vibração de um canal já criado) com som e vibração
+ * longa.
+ */
+const CANAL_DIRECAO = "direcao-continua-v2";
+const AVISOS_DIRECAO = [
+  {
+    id: "direcao-continua-270",
+    minutos: DIRECAO_CONTINUA_PREVIO_MIN,
+    titulo: "Atenção: 4h30 de direção",
+    corpo:
+      "Você está há 4h30 dirigindo sem pausa. Em 30 minutos chega a 5h, planeje uma parada para descanso de 30 minutos.",
+  },
+  {
+    id: "direcao-continua-300",
+    minutos: DIRECAO_CONTINUA_ATENCAO_MIN,
+    titulo: "Atenção: 5h de direção contínua",
+    corpo:
+      "Você completou 5h de direção sem pausa. O limite legal é 5h30. Pare em local seguro e registre o descanso.",
+  },
+  {
+    id: "direcao-continua-330",
+    minutos: DIRECAO_CONTINUA_CRITICO_MIN,
+    titulo: "LIMITE LEGAL: 5h30 de direção",
+    corpo:
+      "Você atingiu 5h30 de direção contínua. Pare agora em local seguro e registre o descanso de 30 minutos.",
+  },
+] as const;
+
+async function sincronizarAvisosDeDirecao(
+  Notifications: NotificationsModulo,
+): Promise<void> {
+  for (const a of AVISOS_DIRECAO) {
+    await Notifications.cancelScheduledNotificationAsync(a.id).catch(
+      () => undefined,
+    );
+  }
+  const emCurso = direcaoContinuaEmCurso(listarEventosDaJornadaAtual());
+  if (!emCurso) return;
+
+  const permissao = await Notifications.getPermissionsAsync();
+  if (permissao.status !== "granted") return;
+
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync(CANAL_DIRECAO, {
+      name: "Alertas de direção contínua",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "default",
+      enableVibrate: true,
+      vibrationPattern: [0, 800, 400, 800, 400, 800],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
+  }
+
+  const agora = agoraConfiavel();
+  const decorridoMin = Math.max(0, (agora - emCurso.inicioTrechoMs) / 60_000);
+  for (const a of AVISOS_DIRECAO) {
+    const faltaMin = a.minutos - (emCurso.minutosAntes + decorridoMin);
+    const faltaS = Math.ceil(faltaMin * 60);
+    if (faltaS < 5) continue; // já passou
+    await Notifications.scheduleNotificationAsync({
+      identifier: a.id,
+      content: {
+        title: a.titulo,
+        body: a.corpo,
+        sound: "default",
+        priority: Notifications.AndroidNotificationPriority.MAX,
+        vibrate: [0, 800, 400, 800, 400, 800],
+        data: { tipo: "DIRECAO_CONTINUA_LOCAL" },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date(agora + faltaS * 1000),
+        channelId: CANAL_DIRECAO,
+      },
+    });
+  }
+}
+
 export async function sincronizarLembretesDeJornada(): Promise<void> {
   if (rodandoNoExpoGo()) return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Notifications: NotificationsModulo = require("expo-notifications");
+
+    await sincronizarAvisosDeDirecao(Notifications).catch(() => undefined);
 
     for (const l of LIMIARES) {
       await Notifications.cancelScheduledNotificationAsync(l.id).catch(

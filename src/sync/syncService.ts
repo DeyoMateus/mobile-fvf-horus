@@ -111,8 +111,21 @@ export async function sincronizarFila(): Promise<{
         const mensagem =
           err instanceof ErroApi ? err.message : "Falha de conexão";
         const status401 = err instanceof ErroApi && err.status === 401;
+        // Rodada 137 , falha de REDE/servidor fora do ar/timeout NÃO é
+        // rejeição do ponto: o registro continua exatamente como estava
+        // (PENDENTE segue PENDENTE; ERRO segue ERRO com a explicação
+        // original do backend, não é sobrescrita por "Falha de
+        // conexão"). Só vira ERRO o que o backend rejeitou de verdade
+        // (por item, acima) ou o lote inteiro recusado (4xx).
+        const falhaTransitoria =
+          !(err instanceof ErroApi) ||
+          err.status === undefined ||
+          err.status === 0 ||
+          err.status === 408 ||
+          err.status === 429 ||
+          err.status >= 500;
         for (const registro of pedaco) {
-          marcarErro(registro.idLocal, mensagem);
+          if (!falhaTransitoria) marcarErro(registro.idLocal, mensagem);
           erros++;
           totalProcessado++;
           if (status401) total401++;

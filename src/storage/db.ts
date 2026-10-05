@@ -204,14 +204,14 @@ export async function inserirRegistro(registro: RegistroLocal): Promise<void> {
 
 export async function listarRegistros(): Promise<RegistroLocal[]> {
   const linhas = db.getAllSync<LinhaBruta>(
-    `SELECT * FROM registros_pendentes ORDER BY timestampEvento DESC`,
+    `SELECT * FROM registros_pendentes ORDER BY rowid DESC`,
   );
   return Promise.all(linhas.map(paraRegistroLocal));
 }
 
 export async function listarPendentes(): Promise<RegistroLocal[]> {
   const linhas = db.getAllSync<LinhaBruta>(
-    `SELECT * FROM registros_pendentes WHERE status IN ('PENDENTE', 'ERRO') ORDER BY timestampEvento ASC`,
+    `SELECT * FROM registros_pendentes WHERE status IN ('PENDENTE', 'ERRO') ORDER BY rowid ASC`,
   );
   return Promise.all(linhas.map(paraRegistroLocal));
 }
@@ -268,7 +268,7 @@ export function ultimoTipoEventoRelevanteRegistrado(): TipoEvento | null {
     timestampEvento: string;
     criadoEm: string;
   }>(
-    `SELECT tipoEvento, timestampEvento, criadoEm FROM registros_pendentes ORDER BY rowid DESC LIMIT 1`,
+    `SELECT tipoEvento, timestampEvento, criadoEm FROM registros_pendentes WHERE status <> 'ERRO' ORDER BY rowid DESC LIMIT 1`,
   );
   return maisRecenteEntreLocalEAjuste(linha ?? null)?.tipoEvento ?? null;
 }
@@ -290,7 +290,7 @@ export function ultimoRegistroRelevante(): {
     timestampEvento: string;
     criadoEm: string;
   }>(
-    `SELECT tipoEvento, timestampEvento, criadoEm FROM registros_pendentes ORDER BY rowid DESC LIMIT 1`,
+    `SELECT tipoEvento, timestampEvento, criadoEm FROM registros_pendentes WHERE status <> 'ERRO' ORDER BY rowid DESC LIMIT 1`,
   );
   // Rodada 88 , mesma reconciliação de `ultimoTipoEventoRelevanteRegistrado`
   // acima: um ajuste do gestor mais recente (por `criadoEmServidor`,
@@ -321,7 +321,7 @@ export function obterMinutosDirecaoDaUltimaJornadaFechada(): number | null {
     tipoEvento: TipoEvento;
     timestampEvento: string;
   }>(
-    `SELECT tipoEvento, timestampEvento FROM registros_pendentes ORDER BY rowid ASC`,
+    `SELECT tipoEvento, timestampEvento FROM registros_pendentes WHERE status <> 'ERRO' ORDER BY rowid ASC`,
   );
   if (linhas.length === 0) return null;
 
@@ -687,4 +687,41 @@ function maisRecenteEntreLocalEAjuste(
   return ajusteVence
     ? { tipoEvento: ajuste.tipoEvento, timestampEvento: ajuste.timestampEvento }
     : local;
+}
+
+/**
+ * Rodada 137 , âncora de relógio confiável (hora do servidor + relógio
+ * monotônico do aparelho no mesmo instante). Persistida pra sobreviver
+ * a reiniciar o app (o monotônico só zera no reboot do aparelho, e aí
+ * o `agoraConfiavel` descarta a âncora sozinho).
+ */
+export function salvarAncoraRelogio(
+  horaServidorMs: number,
+  elapsedRealtimeMs: number,
+): void {
+  db.execSync(
+    `CREATE TABLE IF NOT EXISTS ancora_relogio (id INTEGER PRIMARY KEY CHECK (id = 1), horaServidorMs REAL NOT NULL, elapsedRealtimeMs REAL NOT NULL)`,
+  );
+  db.runSync(
+    `INSERT OR REPLACE INTO ancora_relogio (id, horaServidorMs, elapsedRealtimeMs) VALUES (1, ?, ?)`,
+    [horaServidorMs, elapsedRealtimeMs],
+  );
+}
+
+export function lerAncoraRelogio(): {
+  horaServidorMs: number;
+  elapsedRealtimeMs: number;
+} | null {
+  try {
+    db.execSync(
+      `CREATE TABLE IF NOT EXISTS ancora_relogio (id INTEGER PRIMARY KEY CHECK (id = 1), horaServidorMs REAL NOT NULL, elapsedRealtimeMs REAL NOT NULL)`,
+    );
+    return (
+      db.getFirstSync<{ horaServidorMs: number; elapsedRealtimeMs: number }>(
+        `SELECT horaServidorMs, elapsedRealtimeMs FROM ancora_relogio WHERE id = 1`,
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
 }

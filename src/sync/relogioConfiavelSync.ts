@@ -1,5 +1,6 @@
 import { API_URL, ErroApi } from "../api/client";
 import { obterCredenciais } from "../storage/secureCredentials";
+import { registrarAncoraServidor } from "../utils/relogioConfiavel";
 import { obterElapsedRealtimeMs } from "../utils/relogioMonotonico";
 
 /**
@@ -26,7 +27,7 @@ export async function sincronizarRelogioConfiavelSeNecessario(): Promise<void> {
     const credenciais = await obterCredenciais();
     if (!credenciais) return; // ainda não vinculado
 
-    await fetch(`${API_URL}/dispositivo/relogio/sincronizar`, {
+    const resp = await fetch(`${API_URL}/dispositivo/relogio/sincronizar`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -36,6 +37,11 @@ export async function sincronizarRelogioConfiavelSeNecessario(): Promise<void> {
       },
       body: JSON.stringify({ elapsedRealtimeMs }),
     });
+    if (resp.ok) {
+      const dados = (await resp.json()) as { horaServidor?: string };
+      const ms = dados.horaServidor ? Date.parse(dados.horaServidor) : NaN;
+      if (Number.isFinite(ms)) registrarAncoraServidor(ms, elapsedRealtimeMs);
+    }
   } catch (err) {
     if (!(err instanceof ErroApi)) {
       // eslint-disable-next-line no-console

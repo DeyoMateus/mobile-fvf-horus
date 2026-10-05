@@ -354,6 +354,20 @@ export function RegistrarPontoScreen() {
       // pro relógio do sistema , mesmo comportamento de sempre, só não
       // é mais a ÚNICA fonte quando o GPS está disponível.
       const localizacao = await capturarLocalizacao();
+
+      // Rodada 138 , o próprio app detecta relógio adulterado: se a hora
+      // do aparelho diverge da hora confiável (servidor/GPS) por mais de
+      // 5 min, NÃO registra o ponto , avisa o motorista na hora, em vez
+      // de criar um registro que o servidor vai rejeitar depois.
+      const divergenciaMs = Math.abs(Date.now() - agoraConfiavel());
+      if (divergenciaMs > 5 * 60 * 1000) {
+        Alert.alert(
+          "Relógio do aparelho incorreto",
+          "A hora do seu celular está diferente da hora real. O ponto NÃO foi registrado. Ative a data e hora automáticas nas configurações do aparelho e tente de novo. Essa tentativa foi identificada como possível fraude.",
+        );
+        return;
+      }
+
       const agora = localizacao.timestampGpsMs
         ? new Date(localizacao.timestampGpsMs).toISOString()
         : new Date().toISOString();
@@ -409,7 +423,17 @@ export function RegistrarPontoScreen() {
       }
       setObservacao("");
 
-      void sincronizarFila();
+      // Rodada 137 , se o backend rejeitar (ERRO), o estado da tela volta
+      // pro último registro VÁLIDO em vez de seguir o ponto rejeitado.
+      void sincronizarFila().finally(() => {
+        setUltimoRelevante(ultimoTipoEventoRelevanteRegistrado());
+        const u = ultimoRegistroRelevante();
+        setDesdeQuando(
+          u && estaEmEstadoComCronometro(u.tipoEvento)
+            ? u.timestampEvento
+            : null,
+        );
+      });
       // Sucesso: `enviando` só é liberado no finally, mas o botão desse
       // tipo já some da lista (cascata avança), então não há como
       // apertar de novo o mesmo evento , só um evento novo, diferente.

@@ -24,7 +24,31 @@
  * o desvio é 0 (comportamento idêntico ao de antes , nunca regride).
  */
 
+import { lerAncoraRelogio, salvarAncoraRelogio } from "../storage/db";
+import { obterElapsedRealtimeMs } from "./relogioMonotonico";
+
 let desvioMs = 0;
+
+// Rodada 137 , âncora do SERVIDOR: (hora do servidor, monotônico no
+// mesmo instante). Com ela o cronômetro anda com hora de servidor +
+// tempo monotônico decorrido, que mexer no relógio do aparelho não
+// altera.
+let ancora: { horaServidorMs: number; elapsedRealtimeMs: number } | null =
+  null;
+let ancoraCarregada = false;
+
+export function registrarAncoraServidor(
+  horaServidorMs: number,
+  elapsedRealtimeMs: number,
+): void {
+  ancora = { horaServidorMs, elapsedRealtimeMs };
+  ancoraCarregada = true;
+  try {
+    salvarAncoraRelogio(horaServidorMs, elapsedRealtimeMs);
+  } catch {
+    // best-effort
+  }
+}
 
 /**
  * Chamado sempre que um fix de GPS é obtido , atualiza o desvio
@@ -44,5 +68,17 @@ export function registrarFixDeRelogio(
  * correto).
  */
 export function agoraConfiavel(): number {
+  if (!ancoraCarregada) {
+    ancora = lerAncoraRelogio();
+    ancoraCarregada = true;
+  }
+  if (ancora) {
+    const elapsed = obterElapsedRealtimeMs();
+    // elapsed menor que o da âncora = o aparelho reiniciou desde então,
+    // âncora inválida.
+    if (elapsed != null && elapsed >= ancora.elapsedRealtimeMs) {
+      return ancora.horaServidorMs + (elapsed - ancora.elapsedRealtimeMs);
+    }
+  }
   return Date.now() + desvioMs;
 }

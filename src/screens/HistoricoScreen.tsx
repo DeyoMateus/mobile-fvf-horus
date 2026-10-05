@@ -196,13 +196,31 @@ export function HistoricoScreen() {
       .filter((f) => dentroDoFiltro(f.data.slice(0, 10)))
       .map((f) => ({ tipo: "FOLGA_CONCEDIDA", dado: f }));
 
-    return [...itensPonto, ...itensFolgaAvisada, ...itensFolgaConcedida].sort(
-      (a, b) => {
-        const diaDe = (item: ItemHistorico) =>
-          item.tipo === "PONTO" ? item.dado.timestampEvento : item.dado.data;
-        return new Date(diaDe(b)).getTime() - new Date(diaDe(a)).getTime();
-      },
+    // Rodada 138 , os pontos mantêm a ORDEM EM QUE FORAM BATIDOS (vem do
+    // banco por rowid, mais recente primeiro) , não são reordenados pelo
+    // horário gravado, que pode estar fora de sequência num ponto
+    // fraudulento. Só os avisos de folga são encaixados pelo dia deles.
+    const folgas2 = [...itensFolgaAvisada, ...itensFolgaConcedida].sort(
+      (x, y) =>
+        new Date((y.dado as { data: string }).data).getTime() -
+        new Date((x.dado as { data: string }).data).getTime(),
     );
+    const resultado: ItemHistorico[] = [];
+    let i = 0;
+    for (const ponto of itensPonto) {
+      const tPonto = new Date(
+        (ponto.dado as { timestampEvento: string }).timestampEvento,
+      ).getTime();
+      while (
+        i < folgas2.length &&
+        new Date((folgas2[i].dado as { data: string }).data).getTime() >= tPonto
+      ) {
+        resultado.push(folgas2[i++]);
+      }
+      resultado.push(ponto);
+    }
+    while (i < folgas2.length) resultado.push(folgas2[i++]);
+    return resultado;
   }, [registros, folgas, folgasConcedidas, dentroDoFiltro]);
 
   const itensExibidos = useMemo(
@@ -710,7 +728,12 @@ function criarEstilos(cores: CoresTema) {
     erro: { fontSize: 11, color: "#b91c1c", marginTop: 2 },
     status: { fontSize: 12, fontWeight: "700" },
     // Rodada 57 , linha de aviso de folga dentro do Histórico.
-    linhaFolga: { borderLeftWidth: 3, borderLeftColor: cores.primario },
+    linhaFolga: {
+      borderLeftWidth: 3,
+      borderLeftColor: cores.primario,
+      // Rodada 139 , texto a 3px da barra da esquerda.
+      paddingLeft: 3,
+    },
     observacaoFolga: {
       fontSize: 12,
       color: cores.textoSecundario,

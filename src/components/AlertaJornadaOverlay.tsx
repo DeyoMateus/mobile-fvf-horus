@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { renderizarHorarios } from "../utils/horariosMensagem";
 import {
   Alert,
   Modal,
@@ -94,7 +95,7 @@ export function AlertaJornadaOverlay({
         <View style={estilos.conteudo}>
           <Text style={estilos.icone}>⚠️</Text>
           <Text style={estilos.titulo}>Alerta de jornada</Text>
-          <Text style={estilos.mensagem}>{alerta.mensagem}</Text>
+          <Text style={estilos.mensagem}>{renderizarHorarios(alerta.mensagem)}</Text>
           <Text style={estilos.dica}>
             Pare com segurança assim que possível e faça a pausa exigida.
           </Text>

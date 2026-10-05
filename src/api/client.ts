@@ -61,6 +61,7 @@ export async function enviarLoteRegistros(
     | "idLocal"
     | "flagsIntegridadeDispositivo"
     | "elapsedRealtimeMs"
+    | "fusoOffsetMin"
   >[],
 ): Promise<ResultadoItemLoteRegistro[]> {
   return requisitar("/registros-jornada/lote", {
@@ -84,6 +85,7 @@ export async function enviarLoteRegistros(
           ? registro.flagsIntegridadeDispositivo
           : undefined,
         elapsedRealtimeMs: registro.elapsedRealtimeMs ?? undefined,
+        fusoOffsetMin: registro.fusoOffsetMin ?? undefined,
       })),
     }),
   });

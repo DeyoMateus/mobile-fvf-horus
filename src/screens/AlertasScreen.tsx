@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { renderizarHorarios } from "../utils/horariosMensagem";
 import {
   Alert,
   FlatList,
@@ -274,7 +275,7 @@ export function AlertasScreen({
                 )}
               </View>
               <Text style={estilos.itemMensagem} numberOfLines={2}>
-                {item.mensagem}
+                {renderizarHorarios(item.mensagem)}
               </Text>
               <Text style={estilos.itemData}>
                 {new Date(item.createdAt).toLocaleString("pt-BR")}

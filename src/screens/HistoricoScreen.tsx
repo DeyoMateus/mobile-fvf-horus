@@ -20,7 +20,9 @@ import {
 import { DataInput } from "../components/DataInput";
 import { BotaoMinimizar } from "../components/BotaoMinimizar";
 import { RegistroDetalheModal } from "../components/RegistroDetalheModal";
+import { buscarMeusRegistros } from "../api/registros";
 import { listarRegistros } from "../storage/db";
+import { dataIsoParaBr } from "../utils/mascaras";
 import { obterCredenciais } from "../storage/secureCredentials";
 import { sincronizarFila } from "../sync/syncService";
 import type { CredenciaisDispositivo, RegistroLocal } from "../types";
@@ -49,12 +51,7 @@ const QTD_INCREMENTO = 10;
 
 type FiltroHistorico = "NENHUM" | "DATA" | "INTERVALO";
 type PresetComprovante =
-  | "HOJE"
-  | "7_DIAS"
-  | "30_DIAS"
-  | "MES_ATUAL"
-  | "PERSONALIZADO"
-  | "TUDO";
+  "HOJE" | "7_DIAS" | "30_DIAS" | "MES_ATUAL" | "PERSONALIZADO" | "TUDO";
 
 /** "AAAA-MM-DD" no fuso do próprio aparelho (não UTC) , pra comparar com o que o motorista digita. */
 function dataLocalIso(data: Date): string {
@@ -86,6 +83,9 @@ export function HistoricoScreen() {
   const { cores } = useTema();
   const estilos = criarEstilos(cores);
   const [registros, setRegistros] = useState<RegistroLocal[]>([]);
+  // Rodada 141 , registros que o servidor tem de uma data/intervalo
+  // filtrado e que este aparelho não tem (ex.: bateu em outro aparelho).
+  const [extrasServidor, setExtrasServidor] = useState<RegistroLocal[]>([]);
   const [folgas, setFolgas] = useState<AutorrelatoFolga[]>([]);
   const [folgasConcedidas, setFolgasConcedidas] = useState<FolgaConcedida[]>(
     [],
@@ -151,6 +151,55 @@ export function HistoricoScreen() {
     setSincronizando(false);
   }, [credenciais]);
 
+  // Rodada 141 , ao filtrar por data/intervalo, também consulta o
+  // SERVIDOR (o aparelho só guarda 30 dias, e um aparelho novo começa
+  // vazio) e mostra o que faltar, marcado como já enviado.
+  useEffect(() => {
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    let ini = "";
+    let fim = "";
+    if (filtroHistorico === "DATA" && iso.test(filtroDataUnica.trim())) {
+      ini = fim = filtroDataUnica.trim();
+    } else if (filtroHistorico === "INTERVALO") {
+      const a = filtroIntervaloInicio.trim();
+      const b = filtroIntervaloFim.trim();
+      if (iso.test(a)) ini = a;
+      if (iso.test(b)) fim = b;
+      if (!ini && fim) ini = "2000-01-01";
+    }
+    if (!ini || !credenciais) {
+      setExtrasServidor([]);
+      return;
+    }
+    let cancelado = false;
+    void buscarMeusRegistros(credenciais, {
+      inicio: new Date(`${ini}T00:00:00`).toISOString(),
+      fim: fim ? new Date(`${fim}T23:59:59.999`).toISOString() : undefined,
+    })
+      .then((lista) => {
+        if (cancelado) return;
+        const locais = new Set(registros.map((r) => r.idLocal));
+        setExtrasServidor(
+          lista
+            .filter((r) => !locais.has(r.idLocal))
+            .sort((a, b) => b.timestampEvento.localeCompare(a.timestampEvento)),
+        );
+      })
+      .catch(() => {
+        if (!cancelado) setExtrasServidor([]); // sem rede , só o local
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [
+    filtroHistorico,
+    filtroDataUnica,
+    filtroIntervaloInicio,
+    filtroIntervaloFim,
+    credenciais,
+    registros,
+  ]);
+
   // Filtro é sobre a lista LOCAL (já carregada no aparelho, ou já
   // buscada da API no caso das folgas) , não é uma nova consulta, só
   // reduz o que aparece na tela. Mesmo filtro de data se aplica aos
@@ -186,7 +235,7 @@ export function HistoricoScreen() {
   // , um aviso de folga aparece encaixado no lugar certo da linha do
   // tempo, junto dos pontos batidos em volta daquele dia.
   const itensCombinados = useMemo(() => {
-    const itensPonto: ItemHistorico[] = registros
+    const itensPonto: ItemHistorico[] = [...registros, ...extrasServidor]
       .filter((r) => dentroDoFiltro(dataDoRegistroLocal(r.timestampEvento)))
       .map((r) => ({ tipo: "PONTO", dado: r }));
     const itensFolgaAvisada: ItemHistorico[] = folgas
@@ -221,7 +270,7 @@ export function HistoricoScreen() {
     }
     while (i < folgas2.length) resultado.push(folgas2[i++]);
     return resultado;
-  }, [registros, folgas, folgasConcedidas, dentroDoFiltro]);
+  }, [registros, extrasServidor, folgas, folgasConcedidas, dentroDoFiltro]);
 
   const itensExibidos = useMemo(
     () => itensCombinados.slice(0, qtdExibida),
@@ -592,7 +641,7 @@ export function HistoricoScreen() {
                     : "Folga concedida pela empresa"}
                 </Text>
                 <Text style={estilos.horario}>
-                  {new Date(item.dado.data).toLocaleDateString("pt-BR")}
+                  {dataIsoParaBr(item.dado.data.slice(0, 10))}
                 </Text>
                 {observacaoOuMotivo && (
                   <Text style={estilos.observacaoFolga}>

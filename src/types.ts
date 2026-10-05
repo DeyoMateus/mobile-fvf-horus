@@ -58,6 +58,13 @@ export interface RegistroLocal {
    * `null` quando o módulo nativo não está disponível (Expo Go).
    */
   elapsedRealtimeMs?: number | null;
+  /**
+   * Rodada 146 , deslocamento do fuso do aparelho NO MOMENTO do toque, em
+   * minutos a leste do UTC (Brasília = -180, Cuiabá = -240). Capturado
+   * offline junto com o evento; o servidor usa para cortar o dia e a
+   * janela noturna (22h–5h) pelo fuso em que o motorista estava.
+   */
+  fusoOffsetMin?: number | null;
   status: StatusSincronizacao;
   tentativas: number;
   ultimoErro?: string | null;

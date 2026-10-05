@@ -48,6 +48,7 @@ import {
 } from "../storage/folgaAvisadaLocal";
 import { obterCredenciais } from "../storage/secureCredentials";
 import { avaliarIntegridadeDispositivo } from "../security/deviceIntegrity";
+import { sincronizarLembretesDeJornada } from "../notifications/lembretesJornada";
 import { sincronizarFila } from "../sync/syncService";
 import {
   iniciarAmostragemDirecao,
@@ -392,6 +393,11 @@ export function RegistrarPontoScreen({
       // módulo nativo não estiver disponível, ex.: Expo Go).
       const elapsedRealtimeMs = obterElapsedRealtimeMs();
 
+      // Rodada 146 , fuso do aparelho no instante do toque (minutos a leste
+      // do UTC). Offline-safe: vai junto com o evento e o servidor corta
+      // dia/noturno por ele, conferindo com o GPS.
+      const fusoOffsetMin = -new Date(agora).getTimezoneOffset();
+
       const idLocalNovo = Crypto.randomUUID();
       await inserirRegistro({
         idLocal: idLocalNovo,
@@ -405,6 +411,7 @@ export function RegistrarPontoScreen({
           ? flagsIntegridadeDispositivo
           : null,
         elapsedRealtimeMs,
+        fusoOffsetMin,
         status: "PENDENTE",
         tentativas: 0,
         criadoEm: agora,
@@ -453,6 +460,7 @@ export function RegistrarPontoScreen({
       setDesdeQuando(
         u && estaEmEstadoComCronometro(u.tipoEvento) ? u.timestampEvento : null,
       );
+      void sincronizarLembretesDeJornada();
       const salvo = await obterRegistroPorIdLocal(idLocalNovo);
       setResultadoPonto({
         rotulo: rotuloDoTipo(tipoEvento),

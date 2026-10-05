@@ -1,4 +1,5 @@
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { renderizarHorarios } from "../utils/horariosMensagem";
 import type { AlertaJornada } from "../api/alertas";
 import { orientacaoAlerta, rotuloAlerta } from "../domain/alertasInfo";
 import { useTema } from "../theme/ThemeContext";
@@ -51,7 +52,7 @@ export function AlertaDetalheModal({
           </Text>
 
           <Text style={estilos.secaoTitulo}>O que aconteceu</Text>
-          <Text style={estilos.texto}>{alerta.mensagem}</Text>
+          <Text style={estilos.texto}>{renderizarHorarios(alerta.mensagem)}</Text>
 
           <Text style={estilos.secaoTitulo}>O que fazer</Text>
           <Text style={estilos.texto}>{orientacaoAlerta(alerta)}</Text>

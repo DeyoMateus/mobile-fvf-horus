@@ -23,6 +23,8 @@ interface PayloadCifrado {
   flagsIntegridadeDispositivo?: string[] | null;
   /** Rodada 88 , ver RegistroLocal.elapsedRealtimeMs em ../types.ts. */
   elapsedRealtimeMs?: number | null;
+  /** Rodada 146 , ver RegistroLocal.fusoOffsetMin em ../types.ts. */
+  fusoOffsetMin?: number | null;
 }
 
 interface LinhaBruta {
@@ -166,6 +168,7 @@ async function paraRegistroLocal(linha: LinhaBruta): Promise<RegistroLocal> {
     observacao: payload.observacao ?? null,
     flagsIntegridadeDispositivo: payload.flagsIntegridadeDispositivo ?? null,
     elapsedRealtimeMs: payload.elapsedRealtimeMs ?? null,
+    fusoOffsetMin: payload.fusoOffsetMin ?? null,
     status: linha.status,
     tentativas: linha.tentativas,
     ultimoErro: linha.ultimoErro,
@@ -182,6 +185,7 @@ export async function inserirRegistro(registro: RegistroLocal): Promise<void> {
     observacao: registro.observacao ?? null,
     flagsIntegridadeDispositivo: registro.flagsIntegridadeDispositivo ?? null,
     elapsedRealtimeMs: registro.elapsedRealtimeMs ?? null,
+    fusoOffsetMin: registro.fusoOffsetMin ?? null,
   });
 
   db.runSync(
@@ -734,4 +738,44 @@ export function lerAncoraRelogio(): {
   } catch {
     return null;
   }
+}
+
+/** Rodada 141 , quantos registros já enviados este aparelho tem. */
+export function contarRegistrosEnviados(): number {
+  const l = db.getFirstSync<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM registros_pendentes WHERE status = 'ENVIADO'`,
+  );
+  return l?.n ?? 0;
+}
+
+/**
+ * Rodada 141 , grava registros vindos do servidor (aparelho novo) como
+ * ENVIADO, em ordem cronológica. Pontos que este aparelho já bateu e
+ * ainda não enviou (PENDENTE/ERRO) são reinseridos DEPOIS, pra
+ * continuarem sendo os mais recentes pela ordem real (rowid).
+ */
+export async function restaurarRegistrosDoServidor(
+  registros: RegistroLocal[],
+): Promise<number> {
+  const existentes = new Set(
+    db
+      .getAllSync<{ idLocal: string }>(
+        `SELECT idLocal FROM registros_pendentes`,
+      )
+      .map((l) => l.idLocal),
+  );
+  const novos = registros
+    .filter((r) => !existentes.has(r.idLocal))
+    .sort((a, b) => a.timestampEvento.localeCompare(b.timestampEvento));
+  if (novos.length === 0) return 0;
+
+  const pendentes = await listarPendentes();
+  if (pendentes.length > 0) {
+    db.runSync(
+      `DELETE FROM registros_pendentes WHERE status IN ('PENDENTE', 'ERRO')`,
+    );
+  }
+  for (const r of novos) await inserirRegistro(r);
+  for (const p of pendentes) await inserirRegistro(p);
+  return novos.length;
 }

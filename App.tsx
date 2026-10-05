@@ -26,6 +26,8 @@ import { AjustesEmpresaScreen } from "./src/screens/AjustesEmpresaScreen";
 import { HorasScreen } from "./src/screens/HorasScreen";
 import { PerfilMotoristaScreen } from "./src/screens/PerfilMotoristaScreen";
 import { iniciarBanco, ultimoRegistroRelevante } from "./src/storage/db";
+import { restaurarSeAparelhoNovo } from "./src/sync/restauracaoService";
+import { sincronizarLembretesDeJornada } from "./src/notifications/lembretesJornada";
 import { iniciarBancoCienciasPendentes } from "./src/storage/db";
 import { iniciarBancoAjustesVistosLocalmente } from "./src/storage/db";
 import {
@@ -107,6 +109,9 @@ const TIPOS_ESTOURO_JORNADA = new Set([
   "JORNADA_DIRECAO_EXCEDIDA",
   "ESPERA_PROXIMA_LIMITE",
   "ESPERA_LIMITE_LEGAL_ATINGIDO",
+  // Rodada 142 , jornada aberta sem escolher a próxima etapa.
+  "TEMPO_INDEFINIDO_PROXIMO_LIMITE",
+  "TEMPO_INDEFINIDO_PROLONGADO",
 ]);
 const INTERVALO_REINCIDENCIA_MS = 40 * 60 * 1000;
 
@@ -153,6 +158,9 @@ function AppInterno() {
   const estilos = criarEstilos(cores);
   const [pronto, setPronto] = useState(false);
   const [vinculado, setVinculado] = useState(false);
+  // Rodada 141 , sobe quando um aparelho novo recebeu o histórico do
+  // servidor, pra as telas relerem o banco local.
+  const [versaoRestauracao, setVersaoRestauracao] = useState(0);
   const [pinConfigurado, setPinConfigurado] = useState(false);
   const [desbloqueado, setDesbloqueado] = useState(false);
   const [aba, setAba] = useState<Aba>("PONTO");
@@ -299,6 +307,15 @@ function AppInterno() {
    * de push configurado (ver claude/bloqueios-dependentes-do-usuario.md),
    * que ainda são pendências.
    */
+  // Rodada 141 , aparelho novo: traz jornada/histórico do servidor.
+  useEffect(() => {
+    if (!vinculado || !desbloqueado) return;
+    void restaurarSeAparelhoNovo().then((n) => {
+      if (n > 0) setVersaoRestauracao((v) => v + 1);
+      void sincronizarLembretesDeJornada();
+    });
+  }, [vinculado, desbloqueado]);
+
   useEffect(() => {
     if (!vinculado || !desbloqueado) return;
     let cancelado = false;
@@ -568,9 +585,12 @@ function AppInterno() {
         behavior={COMPORTAMENTO_TECLADO}
       >
         {aba === "PONTO" && (
-          <RegistrarPontoScreen onVerHistorico={() => setAba("HISTORICO")} />
+          <RegistrarPontoScreen
+            key={versaoRestauracao}
+            onVerHistorico={() => setAba("HISTORICO")}
+          />
         )}
-        {aba === "HISTORICO" && <HistoricoScreen />}
+        {aba === "HISTORICO" && <HistoricoScreen key={versaoRestauracao} />}
         {aba === "HORAS" && <HorasScreen />}
         {aba === "ALERTAS" && (
           <AlertasScreen onTemAlertaNaoVistoMudou={setTemAlertaNaoVisto} />

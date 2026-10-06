@@ -1,0 +1,41 @@
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/package.json b/package.json[m
+[1mindex 6243f1f..93ebb69 100644[m
+[1m--- a/package.json[m
+[1m+++ b/package.json[m
+[36m@@ -13,28 +13,28 @@[m
+   },[m
+   "dependencies": {[m
+     "@noble/ciphers": "^0.6.0",[m
+[31m-    "@react-native-community/datetimepicker": "^9.2.1",[m
+[32m+[m[32m    "@react-native-community/datetimepicker": "9.1.0",[m
+     "@react-native-community/netinfo": "12.0.1",[m
+     "base64-js": "^1.5.1",[m
+     "expo": "^57.0.0",[m
+     "expo-application": "~57.0.3",[m
+[31m-    "expo-background-fetch": "~57.0.19",[m
+[32m+[m[32m    "expo-background-fetch": "~57.0.21",[m
+     "expo-clipboard": "~57.0.2",[m
+     "expo-crypto": "~57.0.3",[m
+     "expo-dev-client": "~57.0.19",[m
+     "expo-device": "~57.0.2",[m
+     "expo-file-system": "~57.0.7",[m
+[31m-    "expo-location": "~57.0.19",[m
+[31m-    "expo-notifications": "~57.0.20",[m
+[32m+[m[32m    "expo-location": "~57.0.20",[m
+[32m+[m[32m    "expo-notifications": "~57.0.22",[m
+     "expo-secure-store": "~57.0.4",[m
+     "expo-sharing": "~57.0.21",[m
+[31m-    "expo-sqlite": "~57.0.3",[m
+[32m+[m[32m    "expo-sqlite": "~57.0.4",[m
+     "expo-status-bar": "~57.0.1",[m
+[31m-    "expo-task-manager": "~57.0.19",[m
+[32m+[m[32m    "expo-task-manager": "~57.0.21",[m
+     "jail-monkey": "^2.8.0",[m
+     "react": "19.2.3",[m
+     "react-native": "0.86.3",[m
+[31m-    "react-native-safe-area-context": "^5.6.1",[m
+[32m+[m[32m    "react-native-safe-area-context": "~5.7.0",[m
+     "react-native-ssl-public-key-pinning": "^1.2.6"[m
+   },[m
+   "devDependencies": {[m

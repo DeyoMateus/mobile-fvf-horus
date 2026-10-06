@@ -1131,10 +1131,13 @@ function criarEstilos(cores: CoresTema) {
       borderWidth: 1,
       borderColor: cores.borda,
       alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 8,
     },
     botaoModalCancelarTexto: {
       color: cores.textoSecundario,
       fontWeight: "600",
+      textAlign: "center",
     },
     botaoModalConfirmar: {
       flex: 1,
@@ -1142,8 +1145,14 @@ function criarEstilos(cores: CoresTema) {
       borderRadius: 8,
       backgroundColor: cores.primario,
       alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 8,
     },
-    botaoModalConfirmarTexto: { color: cores.primarioTexto, fontWeight: "600" },
+    botaoModalConfirmarTexto: {
+      color: cores.primarioTexto,
+      fontWeight: "600",
+      textAlign: "center",
+    },
     carregandoFundo: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.35)",

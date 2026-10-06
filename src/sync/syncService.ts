@@ -54,6 +54,20 @@ let listenersIniciados = false;
 // a fila pendente bate 401 na mesma rodada de sync.
 let aoDetectarPossivelRevogacao: (() => void) | null = null;
 
+// Rodada 161: aviso de ponto recusado pelo backend DEPOIS do toque (envio
+// em segundo plano). Sem isso o estado da tela voltava pro ponto anterior
+// sem nenhuma explicação. Só avisa de registros criados há mais de 90s
+// (quem acabou de tocar já vê o resultado na própria tela de registro).
+let aoRegistroRecusado:
+  | ((itens: { tipoEvento: string; erro: string }[]) => void)
+  | null = null;
+
+export function registrarCallbackRegistroRecusado(
+  callback: ((itens: { tipoEvento: string; erro: string }[]) => void) | null,
+): void {
+  aoRegistroRecusado = callback;
+}
+
 export function registrarCallbackRevogacao(
   callback: (() => void) | null,
 ): void {
@@ -79,6 +93,7 @@ export async function sincronizarFila(): Promise<{
   let erros = 0;
   let total401 = 0;
   let totalProcessado = 0;
+  const recusados: { tipoEvento: string; erro: string }[] = [];
 
   try {
     const credenciais = await obterCredenciais();
@@ -100,6 +115,15 @@ export async function sincronizarFila(): Promise<{
               resultado.erro ?? "Falha ao processar no backend",
             );
             erros++;
+            if (
+              Date.now() - new Date(registro.criadoEm).getTime() >
+              90_000
+            ) {
+              recusados.push({
+                tipoEvento: registro.tipoEvento,
+                erro: resultado.erro ?? "Falha ao processar no backend",
+              });
+            }
           }
           totalProcessado++;
         }
@@ -137,6 +161,7 @@ export async function sincronizarFila(): Promise<{
     if (totalProcessado > 0 && total401 === totalProcessado) {
       aoDetectarPossivelRevogacao?.();
     }
+    if (recusados.length > 0) aoRegistroRecusado?.(recusados);
   } finally {
     sincronizando = false;
   }

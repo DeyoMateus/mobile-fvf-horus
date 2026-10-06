@@ -719,9 +719,24 @@ function maisRecenteEntreLocalEAjuste(
       tipoEvento: ajuste.tipoEvento,
       timestampEvento: ajuste.timestampEvento,
     };
-  const ajusteVence =
+  // Rodada 161 , achado real do usuário: "estava em direção e voltou
+  // para o início de jornada, sem aparecer erro". Causa: um ajuste do
+  // gestor lançado DEPOIS (por `criadoEmServidor`) mas para um horário
+  // ANTERIOR ao último toque do motorista (ex.: preencher uma lacuna do
+  // passado) vencia pela regra de criação e puxava o estado da tela de
+  // volta pra um ponto antigo. Agora o ajuste só vence se, além de ter
+  // sido criado depois, o horário dele não é anterior ao último toque
+  // local. Exceção: se o último toque local tem horário no futuro (relógio
+  // fabricado em testes antigos), vale só a regra de criação, como antes.
+  const criadoDepois =
     new Date(ajuste.criadoEmServidor).getTime() >
     new Date(local.criadoEm).getTime();
+  const horarioLocalMs = new Date(local.timestampEvento).getTime();
+  const localNoFuturo = horarioLocalMs > Date.now() + 5 * 60 * 1000;
+  const ajusteNaoEhAnterior =
+    localNoFuturo ||
+    new Date(ajuste.timestampEvento).getTime() >= horarioLocalMs;
+  const ajusteVence = criadoDepois && ajusteNaoEhAnterior;
   return ajusteVence
     ? { tipoEvento: ajuste.tipoEvento, timestampEvento: ajuste.timestampEvento }
     : local;

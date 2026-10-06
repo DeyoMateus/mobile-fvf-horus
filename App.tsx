@@ -42,6 +42,7 @@ import {
 import { limparPin, temPinCadastrado } from "./src/storage/pin";
 import {
   iniciarSincronizacaoAutomatica,
+  registrarCallbackRegistroRecusado,
   registrarCallbackRevogacao,
 } from "./src/sync/syncService";
 import { registrarSincronizacaoEmBackground } from "./src/sync/backgroundTask";
@@ -258,11 +259,21 @@ function AppInterno() {
     registrarCallbackRevogacao(() => {
       void encerrarVinculoLocal();
     });
+    registrarCallbackRegistroRecusado((itens) => {
+      Alert.alert(
+        "Ponto não registrado",
+        itens
+          .map((i) => `${i.tipoEvento.replace(/_/g, " ")}: ${i.erro}`)
+          .join("\n\n") +
+          "\n\nO app voltou para o último ponto válido. Procure o gestor para ajustar se for necessário.",
+      );
+    });
 
     const parar = iniciarSincronizacaoAutomatica();
     void registrarSincronizacaoEmBackground();
     return () => {
       registrarCallbackRevogacao(null);
+      registrarCallbackRegistroRecusado(null);
       parar();
     };
   }, []);

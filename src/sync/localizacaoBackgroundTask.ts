@@ -68,6 +68,13 @@ TaskManager.defineTask(NOME_TASK_LOCALIZACAO, async ({ data, error }) => {
   const posicao = locations?.[locations.length - 1];
   if (!posicao) return;
 
+  // Rodada 156 , no máximo 1 amostra por hora (ver INTERVALO_MINIMO_ENTRE_AMOSTRAS_MS).
+  const agoraMs = Date.now();
+  if (agoraMs - ultimaAmostraGravadaMs < INTERVALO_MINIMO_ENTRE_AMOSTRAS_MS) {
+    return;
+  }
+  ultimaAmostraGravadaMs = agoraMs;
+
   try {
     inserirAmostraLocalizacao({
       idLocal: Crypto.randomUUID(),
@@ -107,7 +114,14 @@ export async function obterPermissaoLocalizacaoSempre(): Promise<Location.Permis
   return pedido.status;
 }
 
-const INTERVALO_AMOSTRAGEM_MS = 15 * 60 * 1000; // 15 minutos
+// Rodada 156 , bateria: era 15 min; agora 1 hora (pedido do usuário: "uma vez
+// por hora"). Prioridade `Lowest` (rede/torres, sem ligar o GPS) e um
+// limitador no próprio handler (`INTERVALO_MINIMO_ENTRE_AMOSTRAS_MS`) pra
+// nunca gravar/sincronizar mais de uma amostra por hora, mesmo que o sistema
+// entregue posições com mais frequência.
+const INTERVALO_AMOSTRAGEM_MS = 60 * 60 * 1000; // 1 hora
+const INTERVALO_MINIMO_ENTRE_AMOSTRAS_MS = 55 * 60 * 1000;
+let ultimaAmostraGravadaMs = 0;
 
 async function iniciarTaskDeAmostragem(): Promise<void> {
   const jaIniciado = await Location.hasStartedLocationUpdatesAsync(
@@ -119,7 +133,7 @@ async function iniciarTaskDeAmostragem(): Promise<void> {
     // Baixa energia: prioriza rede/torres de celular sobre o rádio de
     // GPS contínuo. Suficiente pra amostragem antifraude (não precisa
     // da precisão fina usada no "bater ponto").
-    accuracy: Location.Accuracy.Low,
+    accuracy: Location.Accuracy.Lowest,
     // Rodada 51 , pedido do usuário: trocado de gatilho por distância
     // (a cada ~300m) pra gatilho por TEMPO, a cada 15min, enquanto
     // durar o trecho de direção. `distanceInterval: 0` desliga o

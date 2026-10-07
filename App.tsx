@@ -76,6 +76,8 @@ import { listarMeusAlertas } from "./src/api/alertas";
 import { verificarVinculoAtivo } from "./src/api/motorista";
 import type { AlertaJornada } from "./src/api/alertas";
 import { AlertaJornadaOverlay } from "./src/components/AlertaJornadaOverlay";
+import { verificarPermissoesAlertas } from "./src/notifications/permissoesAlertas";
+import { PermissoesAlertasScreen } from "./src/screens/PermissoesAlertasScreen";
 import { AlertaLocalTelaCheia } from "./src/components/AlertaLocalTelaCheia";
 import {
   alertaJaTocado,
@@ -182,6 +184,7 @@ function AppInterno() {
   const [aba, setAba] = useState<Aba>("PONTO");
   const [menuAberto, setMenuAberto] = useState(false);
   const menuAnim = useRef(new Animated.Value(0)).current; // 0 = fechado, 1 = aberto
+  const [faltaPermissaoAlertas, setFaltaPermissaoAlertas] = useState(false);
   const [filaAlertasJornada, setFilaAlertasJornada] = useState<AlertaJornada[]>(
     [],
   );
@@ -313,6 +316,9 @@ function AppInterno() {
       if (proximoEstado === "active" && !veioDeAtivo) {
         void sincronizarLembretesDeJornada();
         void pararAmostragemSeNaoEstaDirigindo();
+        void verificarPermissoesAlertas().then((e) =>
+          setFaltaPermissaoAlertas(!e.tudoOk),
+        );
         // Aparelho novo que ainda não conseguiu restaurar o histórico do
         // servidor (estava sem rede): tenta de novo ao voltar pro app.
         void restaurarSeAparelhoNovo().then((n) => {
@@ -348,6 +354,12 @@ function AppInterno() {
   // Rodada 141 , aparelho novo: traz jornada/histórico do servidor.
   useEffect(() => {
     if (!vinculado || !desbloqueado) return;
+    // Notificações, alarmes e tela cheia são obrigatórios: sem eles o app
+    // mostra a tela de permissões (PermissoesAlertasScreen) em vez do uso.
+    void verificarPermissoesAlertas().then((e) => {
+      setFaltaPermissaoAlertas(!e.tudoOk);
+      if (e.tudoOk) void sincronizarLembretesDeJornada();
+    });
     void restaurarSeAparelhoNovo().then((n) => {
       if (n > 0) setVersaoRestauracao((v) => v + 1);
       void sincronizarLembretesDeJornada();
@@ -640,6 +652,23 @@ function AppInterno() {
             onEsqueciOPin={() => void esqueciOPin()}
           />
         </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  if (faltaPermissaoAlertas) {
+    return (
+      <SafeAreaView
+        style={estilos.raiz}
+        edges={["top", "left", "right", "bottom"]}
+      >
+        <StatusBar style={cores.statusBar} />
+        <PermissoesAlertasScreen
+          onConcluido={() => {
+            setFaltaPermissaoAlertas(false);
+            void sincronizarLembretesDeJornada();
+          }}
+        />
       </SafeAreaView>
     );
   }

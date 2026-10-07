@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "856310831497",
+    "project_id": "fvfhorusmotorista",
+    "storage_bucket": "fvfhorusmotorista.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:856310831497:android:a024a87ac2245ccd0f2958",
+        "android_client_info": {
+          "package_name": "com.fvfhorus.motorista"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeHIcrbaaJsPgmUrVE1msssPNYetEv6Es"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -301,6 +301,11 @@ function AppInterno() {
       if (proximoEstado === "active" && !veioDeAtivo) {
         void sincronizarLembretesDeJornada();
         void pararAmostragemSeNaoEstaDirigindo();
+        // Aparelho novo que ainda não conseguiu restaurar o histórico do
+        // servidor (estava sem rede): tenta de novo ao voltar pro app.
+        void restaurarSeAparelhoNovo().then((n) => {
+          if (n > 0) setVersaoRestauracao((v) => v + 1);
+        });
       }
       estadoAppAnterior.current = proximoEstado;
     });

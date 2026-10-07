@@ -27,7 +27,12 @@ export async function restaurarSeAparelhoNovo(): Promise<number> {
     tentadoNestaSessao = true; // só depois de conseguir falar com o servidor
     if (doServidor.length === 0) return 0;
     return await restaurarRegistrosDoServidor(doServidor);
-  } catch {
-    return 0; // sem rede agora , tenta de novo na próxima chamada
+  } catch (err) {
+    // Sem rede (ou erro do servidor): tenta de novo na próxima chamada
+    // (ao desbloquear, ao voltar pro app). O motivo fica no log para
+    // diagnóstico (antes era engolido sem rastro).
+    // eslint-disable-next-line no-console
+    console.warn("Restauração de registros do servidor falhou", err);
+    return 0;
   }
 }

@@ -10,6 +10,7 @@ import { Platform } from "react-native";
 import { API_URL, ErroApi } from "../api/client";
 import { obterCredenciais } from "../storage/secureCredentials";
 import { rodandoNoExpoGo } from "../utils/ambiente";
+import { garantirCanalAlertas } from "./canalAlertas";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 type NotificationsModulo = typeof import("expo-notifications");
 
@@ -48,12 +49,7 @@ export async function registrarPushTokenSeNecessario(): Promise<void> {
     }
     if (status !== "granted") return;
 
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("alertas-jornada", {
-        name: "Alertas de jornada",
-        importance: Notifications.AndroidImportance.HIGH,
-      });
-    }
+    await garantirCanalAlertas(Notifications);
 
     const { data: pushToken } = await Notifications.getExpoPushTokenAsync();
 

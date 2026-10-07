@@ -733,6 +733,7 @@ export function AjustesEmpresaScreen({
                 value={justificativa}
                 onChangeText={setJustificativa}
                 multiline
+                maxLength={400}
                 numberOfLines={3}
               />
 

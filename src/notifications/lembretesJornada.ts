@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { CANAL_ALERTAS, garantirCanalAlertas } from "./canalAlertas";
 import { estaEmTempoIndefinido } from "../domain/regrasJornada";
 import {
   direcaoContinuaEmCurso,
@@ -133,12 +134,7 @@ export async function sincronizarLembretesDeJornada(): Promise<void> {
     const permissao = await Notifications.getPermissionsAsync();
     if (permissao.status !== "granted") return;
 
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("alertas-jornada", {
-        name: "Alertas de jornada",
-        importance: Notifications.AndroidImportance.HIGH,
-      });
-    }
+    await garantirCanalAlertas(Notifications);
 
     const decorridoMs =
       agoraConfiavel() - new Date(ultimo.timestampEvento).getTime();
@@ -157,7 +153,7 @@ export async function sincronizarLembretesDeJornada(): Promise<void> {
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: faltaS,
-          channelId: "alertas-jornada",
+          channelId: CANAL_ALERTAS,
         },
       });
     }

@@ -441,7 +441,9 @@ export function RegistrarPontoScreen({
         // GPS contínuo do celular (ver comentário em
         // `iniciarAmostragemDirecao`).
         void iniciarAmostragemDirecao(Boolean(veiculo?.idRastreador));
-      } else if (tipoEvento === "FIM_DIRECAO") {
+      } else {
+        // Qualquer outro evento (fim de direção, descanso, espera, fim de
+        // jornada...) encerra o trecho: GPS em segundo plano desligado.
         void pararAmostragemDirecao();
       }
       setObservacao("");
@@ -913,6 +915,7 @@ export function RegistrarPontoScreen({
               placeholderTextColor={cores.inputPlaceholder}
               value={observacao}
               onChangeText={setObservacao}
+              maxLength={400}
               autoFocus
             />
             <View style={estilos.modalBotoes}>

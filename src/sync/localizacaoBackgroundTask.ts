@@ -209,6 +209,20 @@ export async function pararAmostragemDirecao(): Promise<void> {
 }
 
 /**
+ * Chamada sempre que o app volta para o primeiro plano: se o último evento
+ * não é "Início de direção", garante que o GPS em segundo plano esteja
+ * desligado (nunca liga nada, só desliga).
+ */
+export async function pararAmostragemSeNaoEstaDirigindo(): Promise<void> {
+  try {
+    if (ultimoTipoEventoRelevanteRegistrado() === "INICIO_DIRECAO") return;
+    await pararAmostragemDirecao();
+  } catch {
+    // best-effort
+  }
+}
+
+/**
  * Chamada ao abrir o app (ver `App.tsx`) , cobre o caso de o
  * motorista ter fechado/reaberto o app (ou o sistema ter matado o
  * processo) no meio de um trecho de direção já iniciado: sem isso, a
@@ -220,8 +234,18 @@ export async function retomarAmostragemSeDirigindo(
   temRastreadorDedicado = false,
 ): Promise<void> {
   try {
-    if (temRastreadorDedicado) return;
-    if (ultimoTipoEventoRelevanteRegistrado() !== "INICIO_DIRECAO") return;
+    // Reconcilia nos dois sentidos: se NÃO está em trecho de direção (ou o
+    // veículo tem rastreador), garante que a amostragem esteja DESLIGADA.
+    // Antes só ligava, então um trecho encerrado por outro caminho (ajuste
+    // do gestor, evento rejeitado pelo servidor, app reaberto) deixava o GPS
+    // registrado no sistema indefinidamente.
+    if (
+      temRastreadorDedicado ||
+      ultimoTipoEventoRelevanteRegistrado() !== "INICIO_DIRECAO"
+    ) {
+      await pararAmostragemDirecao();
+      return;
+    }
     const permissao = await Location.getBackgroundPermissionsAsync();
     if (permissao.status !== Location.PermissionStatus.GRANTED) return;
     await iniciarTaskDeAmostragem();

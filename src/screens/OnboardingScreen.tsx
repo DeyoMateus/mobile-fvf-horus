@@ -171,6 +171,7 @@ export function OnboardingScreen({ onVinculado }: { onVinculado: () => void }) {
           placeholderTextColor={cores.inputPlaceholder}
           value={motoristaId}
           onChangeText={setMotoristaId}
+          maxLength={36}
           autoCapitalize="none"
         />
         <TextInput
@@ -179,6 +180,7 @@ export function OnboardingScreen({ onVinculado }: { onVinculado: () => void }) {
           placeholderTextColor={cores.inputPlaceholder}
           value={deviceApiKey}
           onChangeText={setDeviceApiKey}
+          maxLength={200}
           autoCapitalize="none"
           secureTextEntry
         />
@@ -222,6 +224,7 @@ export function OnboardingScreen({ onVinculado }: { onVinculado: () => void }) {
               placeholderTextColor={cores.inputPlaceholder}
               value={motoristaIdTroca}
               onChangeText={setMotoristaIdTroca}
+              maxLength={36}
               autoCapitalize="none"
             />
             <TextInput

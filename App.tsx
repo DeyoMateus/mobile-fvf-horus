@@ -46,7 +46,10 @@ import {
   registrarCallbackRevogacao,
 } from "./src/sync/syncService";
 import { registrarSincronizacaoEmBackground } from "./src/sync/backgroundTask";
-import { retomarAmostragemSeDirigindo } from "./src/sync/localizacaoBackgroundTask";
+import {
+  pararAmostragemSeNaoEstaDirigindo,
+  retomarAmostragemSeDirigindo,
+} from "./src/sync/localizacaoBackgroundTask";
 import { obterVeiculo } from "./src/api/veiculo";
 import type { CredenciaisDispositivo } from "./src/types";
 import { iniciarBancoAmostrasLocalizacao } from "./src/storage/db";
@@ -297,6 +300,7 @@ function AppInterno() {
       // (direção contínua/tempo indefinido) com o relógio confiável.
       if (proximoEstado === "active" && !veioDeAtivo) {
         void sincronizarLembretesDeJornada();
+        void pararAmostragemSeNaoEstaDirigindo();
       }
       estadoAppAnterior.current = proximoEstado;
     });
@@ -392,12 +396,9 @@ function AppInterno() {
     }
 
     void verificarAlertas();
-    const id = setInterval(
-      () => {
-        if (AppState.currentState === "active") void verificarAlertas();
-      },
-      INTERVALO_POLL_ALERTAS_MS,
-    );
+    const id = setInterval(() => {
+      if (AppState.currentState === "active") void verificarAlertas();
+    }, INTERVALO_POLL_ALERTAS_MS);
     return () => {
       cancelado = true;
       clearInterval(id);
@@ -430,12 +431,9 @@ function AppInterno() {
     }
 
     void verificarAjustes();
-    const id = setInterval(
-      () => {
-        if (AppState.currentState === "active") void verificarAjustes();
-      },
-      INTERVALO_POLL_ALERTAS_MS,
-    );
+    const id = setInterval(() => {
+      if (AppState.currentState === "active") void verificarAjustes();
+    }, INTERVALO_POLL_ALERTAS_MS);
     return () => {
       cancelado = true;
       clearInterval(id);

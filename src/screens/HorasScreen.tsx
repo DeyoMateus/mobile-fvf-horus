@@ -331,6 +331,7 @@ export function HorasScreen() {
             placeholderTextColor={cores.inputPlaceholder}
             value={observacaoFolga}
             onChangeText={setObservacaoFolga}
+            maxLength={300}
           />
           <TouchableOpacity
             style={estilos.botaoConfirmarFolga}

@@ -379,6 +379,14 @@ function AppInterno() {
           // e já não descreve a situação atual (o motorista fez a pausa e
           // recomeçou a contagem, ou já escolheu a próxima etapa): não abre
           // a tela vermelha. Continua na lista de Alertas como histórico.
+          // Alerta antigo (aparelho novo / app muito tempo fechado): se foi
+          // gerado há mais de 6 h, é histórico, não abre a tela vermelha.
+          const idadeAlertaMs =
+            agoraConfiavel() - new Date(alerta.createdAt).getTime();
+          if (Number.isFinite(idadeAlertaMs) && idadeAlertaMs > 6 * 3_600_000) {
+            await marcarAlertaComoTocado(alerta.id);
+            continue;
+          }
           const aindaVale =
             alerta.tipo === "DIRECAO_CONTINUA_PROXIMA_LIMITE" ||
             alerta.tipo === "DIRECAO_CONTINUA_EXCEDIDA"

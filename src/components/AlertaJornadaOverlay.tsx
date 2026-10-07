@@ -1,3 +1,4 @@
+import { tocarSomDoAlertaAgora } from "../notifications/canalAlertas";
 import { useEffect } from "react";
 import { renderizarHorarios } from "../utils/horariosMensagem";
 import {
@@ -66,7 +67,20 @@ export function AlertaJornadaOverlay({
   useEffect(() => {
     if (silenciado) return;
     Vibration.vibrate(PADRAO_VIBRACAO, true);
-    return () => Vibration.cancel();
+    let limparSom: () => void = () => {};
+    let desmontado = false;
+    void tocarSomDoAlertaAgora(
+      "Alerta de jornada",
+      alerta.mensagem.slice(0, 180),
+    ).then((remover) => {
+      if (desmontado) remover();
+      else limparSom = remover;
+    });
+    return () => {
+      desmontado = true;
+      limparSom();
+      Vibration.cancel();
+    };
   }, [alerta.id, silenciado]);
 
   function confirmarSilenciar() {

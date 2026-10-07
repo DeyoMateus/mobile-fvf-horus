@@ -32,7 +32,8 @@
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "USE_FULL_SCREEN_INTENT"
       ]
     },
     "plugins": [
@@ -43,7 +44,15 @@
       "expo-sharing",
       "expo-sqlite",
       "expo-status-bar",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "react-native-notify-kit",
+      "./plugins/withTelaSobreBloqueio",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

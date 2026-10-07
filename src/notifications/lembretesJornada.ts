@@ -1,5 +1,7 @@
-import { Platform } from "react-native";
-import { CANAL_ALERTAS, garantirCanalAlertas } from "./canalAlertas";
+import {
+  agendarAlertaLocal,
+  cancelarAlertaLocal,
+} from "./alertaTelaCheia";
 import { estaEmTempoIndefinido } from "../domain/regrasJornada";
 import {
   direcaoContinuaEmCurso,
@@ -15,7 +17,6 @@ import {
 import { rodandoNoExpoGo } from "../utils/ambiente";
 import { agoraConfiavel } from "../utils/relogioConfiavel";
 
-type NotificationsModulo = typeof import("expo-notifications");
 
 /**
  * Rodada 142 , o aviso de "jornada aberta sem escolher a próxima
@@ -63,30 +64,12 @@ const AVISOS_DIRECAO = [
   },
 ] as const;
 
-async function sincronizarAvisosDeDirecao(
-  Notifications: NotificationsModulo,
-): Promise<void> {
+async function sincronizarAvisosDeDirecao(): Promise<void> {
   for (const a of AVISOS_DIRECAO) {
-    await Notifications.cancelScheduledNotificationAsync(a.id).catch(
-      () => undefined,
-    );
+    await cancelarAlertaLocal(a.id);
   }
   const emCurso = direcaoContinuaEmCurso(listarEventosDaJornadaAtual());
   if (!emCurso) return;
-
-  const permissao = await Notifications.getPermissionsAsync();
-  if (permissao.status !== "granted") return;
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(CANAL_DIRECAO, {
-      name: "Alertas de direção contínua",
-      importance: Notifications.AndroidImportance.MAX,
-      sound: "default",
-      enableVibrate: true,
-      vibrationPattern: [0, 800, 400, 800, 400, 800],
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
-  }
 
   const agora = agoraConfiavel();
   const decorridoMin = Math.max(0, (agora - emCurso.inicioTrechoMs) / 60_000);
@@ -94,21 +77,13 @@ async function sincronizarAvisosDeDirecao(
     const faltaMin = a.minutos - (emCurso.minutosAntes + decorridoMin);
     const faltaS = Math.ceil(faltaMin * 60);
     if (faltaS < 5) continue; // já passou
-    await Notifications.scheduleNotificationAsync({
-      identifier: a.id,
-      content: {
-        title: a.titulo,
-        body: a.corpo,
-        sound: "default",
-        priority: Notifications.AndroidNotificationPriority.MAX,
-        vibrate: [0, 800, 400, 800, 400, 800],
-        data: { tipo: "DIRECAO_CONTINUA_LOCAL" },
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: new Date(agora + faltaS * 1000),
-        channelId: CANAL_DIRECAO,
-      },
+    await agendarAlertaLocal({
+      id: a.id,
+      titulo: a.titulo,
+      corpo: a.corpo,
+      quandoMs: agora + faltaS * 1000,
+      // 5h e 5h30 abrem a tela cheia; 4h30 é só um aviso forte.
+      telaCheia: a.minutos >= DIRECAO_CONTINUA_ATENCAO_MIN,
     });
   }
 }
@@ -116,45 +91,29 @@ async function sincronizarAvisosDeDirecao(
 export async function sincronizarLembretesDeJornada(): Promise<void> {
   if (rodandoNoExpoGo()) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Notifications: NotificationsModulo = require("expo-notifications");
-
-    await sincronizarAvisosDeDirecao(Notifications).catch(() => undefined);
+    await sincronizarAvisosDeDirecao().catch(() => undefined);
 
     for (const l of LIMIARES) {
-      await Notifications.cancelScheduledNotificationAsync(l.id).catch(
-        () => undefined,
-      );
+      await cancelarAlertaLocal(l.id);
     }
 
     const tipo = ultimoTipoEventoRelevanteRegistrado();
     const ultimo = ultimoRegistroRelevante();
     if (!ultimo || !estaEmTempoIndefinido(tipo)) return;
 
-    const permissao = await Notifications.getPermissionsAsync();
-    if (permissao.status !== "granted") return;
-
-    await garantirCanalAlertas(Notifications);
-
-    const decorridoMs =
-      agoraConfiavel() - new Date(ultimo.timestampEvento).getTime();
+    const agora = agoraConfiavel();
+    const decorridoMs = agora - new Date(ultimo.timestampEvento).getTime();
     for (const l of LIMIARES) {
       const faltaS = Math.ceil((l.minutos * 60_000 - decorridoMs) / 1000);
       if (faltaS < 5) continue; // esse limiar já passou
-      await Notifications.scheduleNotificationAsync({
-        identifier: l.id,
-        content: {
-          title: "Alerta de jornada",
-          body: l.critico
-            ? `Sua jornada está aberta há ${l.minutos} minutos sem nenhuma etapa escolhida. Esse tempo conta como indefinido. Abra o app e escolha uma ação.`
-            : `Você está há ${l.minutos} minutos sem escolher a próxima etapa (direção, descanso ou espera). Abra o app e escolha uma ação.`,
-          data: { tipo: "TEMPO_INDEFINIDO_LOCAL" },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: faltaS,
-          channelId: CANAL_ALERTAS,
-        },
+      await agendarAlertaLocal({
+        id: l.id,
+        titulo: "Alerta de jornada",
+        corpo: l.critico
+          ? `Sua jornada está aberta há ${l.minutos} minutos sem nenhuma etapa escolhida. Esse tempo conta como indefinido. Abra o app e escolha uma ação.`
+          : `Você está há ${l.minutos} minutos sem escolher a próxima etapa (direção, descanso ou espera). Abra o app e escolha uma ação.`,
+        quandoMs: agora + faltaS * 1000,
+        telaCheia: l.critico,
       });
     }
   } catch {

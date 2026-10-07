@@ -76,6 +76,7 @@ import { listarMeusAlertas } from "./src/api/alertas";
 import { verificarVinculoAtivo } from "./src/api/motorista";
 import type { AlertaJornada } from "./src/api/alertas";
 import { AlertaJornadaOverlay } from "./src/components/AlertaJornadaOverlay";
+import { AlertaLocalTelaCheia } from "./src/components/AlertaLocalTelaCheia";
 import {
   alertaJaTocado,
   alertaSilenciado,
@@ -812,6 +813,7 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AppInterno />
+        <AlertaLocalTelaCheia />
       </ThemeProvider>
     </SafeAreaProvider>
   );

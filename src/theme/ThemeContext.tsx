@@ -90,14 +90,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Botões da barra de navegação do Android (voltar/início/recentes): no
   // tema claro o fundo é branco e o sistema desenhava os botões em cinza
-  // claro (quase invisíveis). "dark" = botões escuros, "light" = claros.
+  // claro (quase invisíveis). "light" = barra clara com botões escuros;
+  // "dark" = barra escura com botões claros. Exige o plugin
+  // expo-navigation-bar com enforceContrast:false (app.json).
   useEffect(() => {
     if (Platform.OS !== "android") return;
-    NavigationBar.setButtonStyleAsync(tema === "claro" ? "dark" : "light").catch(
-      () => {
-        // Sem suporte neste aparelho , só fica com o estilo padrão do sistema.
-      },
-    );
+    try {
+      NavigationBar.setStyle(tema === "claro" ? "light" : "dark");
+    } catch {
+      // Sem suporte neste aparelho , fica com o estilo padrão do sistema.
+    }
   }, [tema]);
 
   function alternarTema() {

@@ -25,7 +25,14 @@ import { AlertasScreen } from "./src/screens/AlertasScreen";
 import { AjustesEmpresaScreen } from "./src/screens/AjustesEmpresaScreen";
 import { HorasScreen } from "./src/screens/HorasScreen";
 import { PerfilMotoristaScreen } from "./src/screens/PerfilMotoristaScreen";
-import { iniciarBanco, ultimoRegistroRelevante } from "./src/storage/db";
+import {
+  iniciarBanco,
+  listarEventosDaJornadaAtual,
+  ultimoRegistroRelevante,
+} from "./src/storage/db";
+import { alertaDirecaoContinuaAindaVale } from "./src/domain/direcaoContinua";
+import { estaEmTempoIndefinido } from "./src/domain/regrasJornada";
+import { agoraConfiavel } from "./src/utils/relogioConfiavel";
 import { restaurarSeAparelhoNovo } from "./src/sync/restauracaoService";
 import { sincronizarLembretesDeJornada } from "./src/notifications/lembretesJornada";
 import { iniciarBancoCienciasPendentes } from "./src/storage/db";
@@ -364,6 +371,28 @@ function AppInterno() {
           )
             continue;
           if (await alertaJaTocado(alerta.id)) continue;
+          // Alerta que chegou ATRASADO ao aparelho (app fechado/sem sinal)
+          // e já não descreve a situação atual (o motorista fez a pausa e
+          // recomeçou a contagem, ou já escolheu a próxima etapa): não abre
+          // a tela vermelha. Continua na lista de Alertas como histórico.
+          const aindaVale =
+            alerta.tipo === "DIRECAO_CONTINUA_PROXIMA_LIMITE" ||
+            alerta.tipo === "DIRECAO_CONTINUA_EXCEDIDA"
+              ? alertaDirecaoContinuaAindaVale(
+                  alerta.tipo,
+                  listarEventosDaJornadaAtual(),
+                  agoraConfiavel(),
+                )
+              : alerta.tipo === "TEMPO_INDEFINIDO_PROXIMO_LIMITE" ||
+                  alerta.tipo === "TEMPO_INDEFINIDO_PROLONGADO"
+                ? estaEmTempoIndefinido(
+                    ultimoRegistroRelevante()?.tipoEvento ?? null,
+                  )
+                : true;
+          if (!aindaVale) {
+            await marcarAlertaComoTocado(alerta.id);
+            continue;
+          }
           // Marca como tocado ANTES de enfileirar , mesmo se o
           // motorista não fechar a tempo do próximo poll, não entra
           // de novo na fila (evita loop de alerta eterno).

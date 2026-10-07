@@ -61,3 +61,27 @@ export function direcaoContinuaEmCurso(
     inicioTrechoMs: new Date(ult.timestampEvento).getTime(),
   };
 }
+
+/**
+ * O alerta de direção contínua (aviso de 5h / excedido de 5h30) ainda
+ * descreve a situação REAL do motorista agora? Não, quando o aviso chegou
+ * atrasado ao aparelho (app fechado/sem sinal) e o motorista já fez uma
+ * pausa qualificada (descanso de 30 min ou mais) ou já parou de dirigir:
+ * a contagem recomeçou do zero e a tela vermelha só confundiria.
+ */
+export function alertaDirecaoContinuaAindaVale(
+  tipo: string,
+  eventosEmOrdemDeToque: EventoSimples[],
+  agoraMs: number,
+): boolean {
+  const emCurso = direcaoContinuaEmCurso(eventosEmOrdemDeToque);
+  if (!emCurso) return false;
+  const acumuladoMin =
+    emCurso.minutosAntes +
+    Math.max(0, agoraMs - emCurso.inicioTrechoMs) / 60_000;
+  const limite =
+    tipo === "DIRECAO_CONTINUA_EXCEDIDA"
+      ? DIRECAO_CONTINUA_CRITICO_MIN
+      : DIRECAO_CONTINUA_ATENCAO_MIN;
+  return acumuladoMin >= limite - 2; // 2 min de tolerância (relógio/arredondamento)
+}

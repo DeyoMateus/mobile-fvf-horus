@@ -33,7 +33,10 @@ import {
 import { alertaDirecaoContinuaAindaVale } from "./src/domain/direcaoContinua";
 import { estaEmTempoIndefinido } from "./src/domain/regrasJornada";
 import { agoraConfiavel } from "./src/utils/relogioConfiavel";
-import { restaurarSeAparelhoNovo } from "./src/sync/restauracaoService";
+import {
+  exigirRestauracaoNoProximoVinculo,
+  restaurarSeAparelhoNovo,
+} from "./src/sync/restauracaoService";
 import { sincronizarLembretesDeJornada } from "./src/notifications/lembretesJornada";
 import { iniciarBancoCienciasPendentes } from "./src/storage/db";
 import { iniciarBancoAjustesVistosLocalmente } from "./src/storage/db";
@@ -224,6 +227,7 @@ function AppInterno() {
   async function encerrarVinculoLocal() {
     await limparVinculo();
     await limparPin();
+    exigirRestauracaoNoProximoVinculo();
     setVinculado(false);
     setPinConfigurado(false);
     setDesbloqueado(false);
@@ -575,6 +579,7 @@ function AppInterno() {
         >
           <OnboardingScreen
             onVinculado={() => {
+              exigirRestauracaoNoProximoVinculo();
               setVinculado(true);
               void registrarPushTokenSeNecessario();
               void obterCredenciais().then((credenciais) => {

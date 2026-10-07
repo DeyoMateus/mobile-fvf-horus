@@ -793,6 +793,16 @@ export function contarRegistrosEnviados(): number {
  * ainda não enviou (PENDENTE/ERRO) são reinseridos DEPOIS, pra
  * continuarem sendo os mais recentes pela ordem real (rowid).
  */
+/**
+ * Novo vínculo (revogação + vínculo manual, ou troca aprovada): o que
+ * este aparelho guarda como ENVIADO pode ser de outro vínculo, e o
+ * servidor é a fonte da verdade. Apaga só os ENVIADO (pendentes de
+ * envio ficam) para o histórico do servidor entrar na ordem certa.
+ */
+export function apagarRegistrosEnviadosLocais(): void {
+  db.runSync(`DELETE FROM registros_pendentes WHERE status = 'ENVIADO'`);
+}
+
 export async function restaurarRegistrosDoServidor(
   registros: RegistroLocal[],
 ): Promise<number> {

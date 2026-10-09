@@ -31,7 +31,7 @@ export const TODOS_OS_SONS: SomAlerta[] = [
 ];
 
 export function canalDoSom(som: SomAlerta): string {
-  return `alerta-voz-${som}-v1`;
+  return `alerta-voz-${som}-v2`;
 }
 
 /** Nome do recurso em res/raw (sem extensão). */

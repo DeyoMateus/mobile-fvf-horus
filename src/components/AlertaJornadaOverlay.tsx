@@ -19,7 +19,7 @@ import type { CoresTema } from "../theme/ThemeContext";
 // novo, em loop , bem diferente da vibração curta de uma notificação
 // comum, de propósito (é um alerta de segurança da jornada, não um
 // "você recebeu uma mensagem").
-const PADRAO_VIBRACAO = [0, 800, 400, 800, 400];
+const PADRAO_VIBRACAO = [0, 800, 400, 800, 400, 800, 400, 800, 1500];
 
 interface Props {
   alerta: AlertaJornada;

@@ -54,7 +54,7 @@ export async function garantirCanalDoSom(
     importance: m.AndroidImportance.HIGH,
     sound: recursoDoSom(som),
     vibration: true,
-    vibrationPattern: [300, 800, 400, 800, 400, 800],
+    vibrationPattern: [300, 800, 400, 800, 400, 800, 400, 800],
     visibility: m.AndroidVisibility.PUBLIC,
     bypassDnd: true,
   });
@@ -131,7 +131,7 @@ export async function agendarAlertaLocal(
         category: m.AndroidCategory.ALARM,
         visibility: m.AndroidVisibility.PUBLIC,
         sound: recursoDoSom(a.som),
-        vibrationPattern: [300, 800, 400, 800, 400, 800],
+        vibrationPattern: [300, 800, 400, 800, 400, 800, 400, 800],
         autoCancel: false,
         pressAction: { id: "default", launchActivity: "default" },
         ...(a.telaCheia
@@ -181,7 +181,7 @@ export async function tocarVozDoAlertaAgora(
         importance: m.AndroidImportance.HIGH,
         category: m.AndroidCategory.ALARM,
         sound: recursoDoSom(som),
-        vibrationPattern: [300, 800, 400, 800, 400, 800],
+        vibrationPattern: [300, 800, 400, 800, 400, 800, 400, 800],
         pressAction: { id: "default" },
       },
     });

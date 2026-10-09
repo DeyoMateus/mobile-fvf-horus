@@ -1,6 +1,11 @@
 import * as NavigationBar from "expo-navigation-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Faixa da barra de navegação do Android (edge-to-edge): azul vibrante e escuro no tema claro, quase preto no escuro. Botões sempre #FFFFFF. */
+const COR_BARRA_NAVEGACAO_CLARO = "#0A3FBF";
+const COR_BARRA_NAVEGACAO_ESCURO = "#05070D";
 import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -96,11 +101,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (Platform.OS !== "android") return;
     try {
-      NavigationBar.setStyle(tema === "claro" ? "light" : "dark");
+      // "light" no expo-navigation-bar = botões CLAROS (brancos). A barra é
+      // sempre escura (faixa desenhada abaixo), então os botões são sempre brancos.
+      NavigationBar.setStyle("light");
     } catch {
       // Sem suporte neste aparelho , fica com o estilo padrão do sistema.
     }
   }, [tema]);
+
+  const insets = useSafeAreaInsets();
 
   function alternarTema() {
     setTema((atual) => {
@@ -116,7 +125,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ tema, cores, alternarTema }}>
-      {children}
+      <View style={{ flex: 1 }}>
+        {children}
+        {Platform.OS === "android" && insets.bottom > 0 && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: insets.bottom,
+              backgroundColor:
+                tema === "claro" ? COR_BARRA_NAVEGACAO_CLARO : COR_BARRA_NAVEGACAO_ESCURO,
+            }}
+          />
+        )}
+      </View>
     </ThemeContext.Provider>
   );
 }

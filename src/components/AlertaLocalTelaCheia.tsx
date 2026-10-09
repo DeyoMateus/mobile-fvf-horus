@@ -24,7 +24,7 @@ interface AlertaTela {
 // Alerta local que ficou na bandeja há mais que isso já não descreve a
 // situação: é limpo sem abrir a tela.
 const VALIDADE_MS = 60 * 60_000;
-const PADRAO_VIBRACAO = [0, 800, 400, 800, 400];
+const PADRAO_VIBRACAO = [0, 800, 400, 800, 400, 800, 400, 800, 1500];
 
 /**
  * Tela vermelha de TELA CHEIA para os avisos locais de jornada (ver

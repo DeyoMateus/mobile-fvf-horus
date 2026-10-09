@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { atualizarVeiculo, obterVeiculo } from "../api/veiculo";
+import { baixarEcompartilharComprovanteRegistro } from "../api/comprovante";
 import {
   anularAutorrelatoFolga,
   listarAutorrelatosFolga,
@@ -143,6 +144,7 @@ interface ResultadoPonto {
   rotulo: string;
   status: "ENVIADO" | "ERRO" | "PENDENTE";
   erro?: string | null;
+  idLocal?: string;
 }
 
 export function RegistrarPontoScreen({
@@ -155,6 +157,8 @@ export function RegistrarPontoScreen({
 
   const [observacao, setObservacao] = useState("");
   const [enviando, setEnviando] = useState<TipoEvento | null>(null);
+  const [baixandoComprovanteRegistro, setBaixandoComprovanteRegistro] =
+    useState(false);
   // Rodada 140 , janela de resultado depois de bater o ponto.
   const [resultadoPonto, setResultadoPonto] = useState<ResultadoPonto | null>(
     null,
@@ -334,9 +338,18 @@ export function RegistrarPontoScreen({
     timestampGpsMs?: number;
   }> {
     try {
-      const posicao = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // Rodada 177: o fix de GPS tinha espera ilimitada (a tela ficava
+      // presa em "Registrando ponto..." dentro de galpão/garagem). Agora
+      // espera no máximo 15 s; sem fix, o ponto segue sem coordenadas,
+      // como já era o comportamento quando o GPS falhava.
+      const posicao = await Promise.race([
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }),
+        new Promise<never>((_, rejeitar) =>
+          setTimeout(() => rejeitar(new Error("gps-timeout")), 15000),
+        ),
+      ]);
       // Rodada 73 , pedido do usuário: o horário do evento não pode
       // confiar só no relógio do sistema do aparelho (fácil de
       // adiantar/atrasar manualmente). `posicao.timestamp` vem do
@@ -460,7 +473,7 @@ export function RegistrarPontoScreen({
       // não registrado (com o motivo) ou salvo aguardando internet.
       await Promise.race([
         sincronizarFila().catch(() => undefined),
-        new Promise((resolve) => setTimeout(resolve, 8000)),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
       ]);
       setUltimoRelevante(ultimoTipoEventoRelevanteRegistrado());
       const u = ultimoRegistroRelevante();
@@ -478,6 +491,7 @@ export function RegistrarPontoScreen({
               ? "ERRO"
               : "PENDENTE",
         erro: salvo?.ultimoErro ?? null,
+        idLocal: idLocalNovo,
       });
       // Sucesso: `enviando` só é liberado no finally, mas o botão desse
       // tipo já some da lista (cascata avança), então não há como
@@ -722,6 +736,32 @@ export function RegistrarPontoScreen({
       horarioExibido: new Date().toLocaleTimeString("pt-BR"),
       flagsIntegridadeDispositivo: integridade.flagsParaAuditoria,
     });
+  }
+
+  async function baixarComprovanteDoResultado() {
+    if (!resultadoPonto?.idLocal || baixandoComprovanteRegistro) return;
+    setBaixandoComprovanteRegistro(true);
+    try {
+      const credenciais = await obterCredenciais();
+      if (!credenciais) {
+        Alert.alert(
+          "Dispositivo não vinculado",
+          "Este aparelho ainda não está vinculado a um motorista.",
+        );
+        return;
+      }
+      await baixarEcompartilharComprovanteRegistro(
+        credenciais,
+        resultadoPonto.idLocal,
+      );
+    } catch (err) {
+      Alert.alert(
+        "Não foi possível baixar o comprovante",
+        err instanceof Error ? err.message : "Erro desconhecido",
+      );
+    } finally {
+      setBaixandoComprovanteRegistro(false);
+    }
   }
 
   function cancelarConfirmacaoPonto() {
@@ -981,7 +1021,28 @@ export function RegistrarPontoScreen({
       >
         <View style={estilos.modalFundo}>
           <View style={estilos.modalCaixa}>
-            <Text style={estilos.modalTitulo}>
+            <View
+              style={[
+                estilos.iconeResultado,
+                {
+                  backgroundColor:
+                    resultadoPonto?.status === "ENVIADO"
+                      ? "#16a34a"
+                      : resultadoPonto?.status === "ERRO"
+                        ? "#dc2626"
+                        : "#d97706",
+                },
+              ]}
+            >
+              <Text style={estilos.iconeResultadoTexto}>
+                {resultadoPonto?.status === "ENVIADO"
+                  ? "✓"
+                  : resultadoPonto?.status === "ERRO"
+                    ? "✕"
+                    : "!"}
+              </Text>
+            </View>
+            <Text style={[estilos.modalTitulo, { textAlign: "center" }]}>
               {resultadoPonto?.status === "ENVIADO"
                 ? "Ponto registrado"
                 : resultadoPonto?.status === "ERRO"
@@ -1003,7 +1064,23 @@ export function RegistrarPontoScreen({
               >
                 <Text style={estilos.botaoModalCancelarTexto}>Fechar</Text>
               </TouchableOpacity>
-              {onVerHistorico && (
+              {resultadoPonto?.status === "ENVIADO" &&
+                resultadoPonto.idLocal && (
+                  <TouchableOpacity
+                    style={estilos.botaoModalConfirmar}
+                    disabled={baixandoComprovanteRegistro}
+                    onPress={() => void baixarComprovanteDoResultado()}
+                  >
+                    {baixandoComprovanteRegistro ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={estilos.botaoModalConfirmarTexto}>
+                        Baixar comprovante
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              {onVerHistorico && resultadoPonto?.status !== "ENVIADO" && (
                 <TouchableOpacity
                   style={estilos.botaoModalConfirmar}
                   onPress={() => {
@@ -1161,6 +1238,15 @@ function criarEstilos(cores: CoresTema) {
       padding: 20,
       gap: 10,
     },
+    iconeResultado: {
+      alignSelf: "center",
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconeResultadoTexto: { color: "#fff", fontSize: 38, fontWeight: "800" },
     modalTitulo: { fontSize: 18, fontWeight: "700", color: cores.texto },
     modalDescricao: { fontSize: 13, color: cores.textoSecundario },
     modalBotoes: { flexDirection: "row", gap: 10, marginTop: 8 },

@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-import { rodandoNoExpoGo } from "../utils/ambiente";
 
 /**
  * Canal Android dos alertas de jornada. O Android NÃO deixa o app mudar
@@ -27,39 +26,4 @@ export async function garantirCanalAlertas(
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     bypassDnd: false,
   });
-}
-
-/**
- * Toca o SOM e a VIBRAÇÃO do sistema (canal v2: importância máxima, som
- * padrão do telefone) quando a tela vermelha de alerta abre com o app em
- * primeiro plano. `Vibration.vibrate` sozinho não é confiável (alguns
- * aparelhos bloqueiam vibração "sem tipo" no modo silencioso) e não há
- * som; uma notificação local imediata no canal v2 usa os ajustes do
- * próprio sistema. Devolve uma função que remove essa notificação.
- */
-export async function tocarSomDoAlertaAgora(
-  titulo: string,
-  corpo: string,
-): Promise<() => void> {
-  if (Platform.OS !== "android" || rodandoNoExpoGo()) return () => {};
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Notifications: NotificationsModulo = require("expo-notifications");
-    await garantirCanalAlertas(Notifications);
-    const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: titulo,
-        body: corpo,
-        sound: "default",
-        priority: Notifications.AndroidNotificationPriority.MAX,
-        vibrate: [0, 700, 300, 700, 300, 700],
-      },
-      trigger: { channelId: CANAL_ALERTAS },
-    });
-    return () => {
-      void Notifications.dismissNotificationAsync(id).catch(() => {});
-    };
-  } catch {
-    return () => {};
-  }
 }

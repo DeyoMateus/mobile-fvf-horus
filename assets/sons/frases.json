@@ -1,0 +1,15 @@
+{
+  "voz": "Vm1VBAu4pGGsuP0SSKrz",
+  "frases": {
+    "direcao_270": "Atenção. Você está há quatro horas e trinta minutos dirigindo sem pausa. Em trinta minutos chega a cinco horas. Planeje uma parada para descanso.",
+    "direcao_300": "Atenção. Cinco horas de direção contínua. O limite legal é cinco horas e trinta minutos. Pare em local seguro e registre o descanso.",
+    "direcao_330": "Limite legal atingido. Cinco horas e trinta minutos de direção contínua. Pare agora em local seguro e registre o descanso de trinta minutos.",
+    "indefinido_15": "Atenção. Você está há quinze minutos sem escolher a próxima etapa. Abra o aplicativo e escolha uma ação.",
+    "indefinido_30": "Alerta. Sua jornada está aberta há trinta minutos sem etapa escolhida. Esse tempo conta como indefinido. Abra o aplicativo e escolha uma ação.",
+    "jornada_proxima": "Atenção. Você está perto do limite da jornada diária de direção. Planeje parar em local seguro.",
+    "jornada_excedida": "Alerta. O limite da jornada diária de direção foi excedido. Pare em local seguro.",
+    "espera_proxima": "Atenção. O tempo de espera está próximo do limite legal.",
+    "espera_limite": "Alerta. O limite legal de tempo de espera foi atingido.",
+    "generico": "Alerta de jornada. Abra o aplicativo para ver a mensagem."
+  }
+}

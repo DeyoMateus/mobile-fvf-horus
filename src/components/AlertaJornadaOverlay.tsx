@@ -1,4 +1,5 @@
-import { tocarSomDoAlertaAgora } from "../notifications/canalAlertas";
+import { tocarVozDoAlertaAgora } from "../notifications/alertaTelaCheia";
+import { somDoTipoDeAlerta } from "../notifications/sonsAlerta";
 import { useEffect } from "react";
 import { renderizarHorarios } from "../utils/horariosMensagem";
 import {
@@ -69,7 +70,8 @@ export function AlertaJornadaOverlay({
     Vibration.vibrate(PADRAO_VIBRACAO, true);
     let limparSom: () => void = () => {};
     let desmontado = false;
-    void tocarSomDoAlertaAgora(
+    void tocarVozDoAlertaAgora(
+      somDoTipoDeAlerta(alerta.tipo),
       "Alerta de jornada",
       alerta.mensagem.slice(0, 180),
     ).then((remover) => {

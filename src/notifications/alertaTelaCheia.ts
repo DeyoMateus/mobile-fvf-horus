@@ -1,5 +1,11 @@
 import { Alert, Platform } from "react-native";
 import { rodandoNoExpoGo } from "../utils/ambiente";
+import {
+  canalDoSom,
+  recursoDoSom,
+  TODOS_OS_SONS,
+} from "./sonsAlerta";
+import type { SomAlerta } from "./sonsAlerta";
 
 /**
  * Alerta de TELA CHEIA sobre o bloqueio (estilo ligação/alarme) para os
@@ -15,7 +21,6 @@ import { rodandoNoExpoGo } from "../utils/ambiente";
  *   estiver em uso, vira notificação normal de máxima prioridade, com
  *   som e vibração do canal.
  */
-export const CANAL_TELA_CHEIA = "alerta-tela-cheia-v1";
 export const MARCA_TELA_CHEIA = "1";
 
 type Modulo = typeof import("react-native-notify-kit");
@@ -38,17 +43,30 @@ try {
   // best-effort
 }
 
-async function garantirCanal(m: Modulo): Promise<void> {
+/** Um canal por frase falada: o som (mp3 em res/raw) é do canal. */
+export async function garantirCanalDoSom(
+  m: Modulo,
+  som: SomAlerta,
+): Promise<void> {
   await m.default.createChannel({
-    id: CANAL_TELA_CHEIA,
-    name: "Alertas de jornada (tela cheia)",
+    id: canalDoSom(som),
+    name: `Alerta falado (${som})`,
     importance: m.AndroidImportance.HIGH,
-    sound: "default",
+    sound: recursoDoSom(som),
     vibration: true,
     vibrationPattern: [300, 800, 400, 800, 400, 800],
     visibility: m.AndroidVisibility.PUBLIC,
     bypassDnd: true,
   });
+}
+
+/** Cria todos os canais já na abertura do app (push remoto também os usa). */
+export async function garantirTodosOsCanaisDeVoz(): Promise<void> {
+  const m = carregarNotifee();
+  if (!m) return;
+  for (const som of TODOS_OS_SONS) {
+    await garantirCanalDoSom(m, som).catch(() => undefined);
+  }
 }
 
 let avisouAlarmes = false;
@@ -85,6 +103,8 @@ export interface AlertaLocalAgendado {
   quandoMs: number;
   /** true = pede tela cheia sobre o bloqueio; false = notificação forte normal. */
   telaCheia: boolean;
+  /** Frase falada que toca (voz no lugar do som padrão). */
+  som: SomAlerta;
 }
 
 export async function agendarAlertaLocal(
@@ -94,7 +114,7 @@ export async function agendarAlertaLocal(
   if (!m) return;
   const cfg = await m.default.getNotificationSettings();
   if (cfg.authorizationStatus !== m.AuthorizationStatus.AUTHORIZED) return;
-  await garantirCanal(m);
+  await garantirCanalDoSom(m, a.som);
   await conferirPermissaoDeAlarme(m);
   await m.default.createTriggerNotification(
     {
@@ -106,11 +126,11 @@ export async function agendarAlertaLocal(
         quando: String(a.quandoMs),
       },
       android: {
-        channelId: CANAL_TELA_CHEIA,
+        channelId: canalDoSom(a.som),
         importance: m.AndroidImportance.HIGH,
         category: m.AndroidCategory.ALARM,
         visibility: m.AndroidVisibility.PUBLIC,
-        sound: "default",
+        sound: recursoDoSom(a.som),
         vibrationPattern: [300, 800, 400, 800, 400, 800],
         autoCancel: false,
         pressAction: { id: "default", launchActivity: "default" },
@@ -132,4 +152,43 @@ export async function cancelarAlertaLocal(id: string): Promise<void> {
   const m = carregarNotifee();
   if (!m) return;
   await m.default.cancelNotification(id).catch(() => undefined);
+}
+
+/**
+ * Alerta do servidor com o app ABERTO: a tela vermelha abre e esta
+ * notificação (sem marca de tela cheia, para não abrir outra tela)
+ * fala a frase do tipo de alerta. Devolve função que a remove.
+ */
+export async function tocarVozDoAlertaAgora(
+  som: SomAlerta,
+  titulo: string,
+  corpo: string,
+): Promise<() => void> {
+  const m = carregarNotifee();
+  if (!m) return () => {};
+  try {
+    const cfg = await m.default.getNotificationSettings();
+    if (cfg.authorizationStatus !== m.AuthorizationStatus.AUTHORIZED) {
+      return () => {};
+    }
+    await garantirCanalDoSom(m, som);
+    const id = await m.default.displayNotification({
+      title: titulo,
+      body: corpo,
+      data: { tela: "0" },
+      android: {
+        channelId: canalDoSom(som),
+        importance: m.AndroidImportance.HIGH,
+        category: m.AndroidCategory.ALARM,
+        sound: recursoDoSom(som),
+        vibrationPattern: [300, 800, 400, 800, 400, 800],
+        pressAction: { id: "default" },
+      },
+    });
+    return () => {
+      void m.default.cancelNotification(id).catch(() => undefined);
+    };
+  } catch {
+    return () => {};
+  }
 }

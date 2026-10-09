@@ -9,6 +9,7 @@ import type { AlertaJornada } from "../api/alertas";
 export const ROTULO_TIPO_ALERTA: Record<string, string> = {
   DIRECAO_CONTINUA_PROXIMA_LIMITE: "Direção contínua perto do limite",
   DIRECAO_CONTINUA_EXCEDIDA: "Direção contínua excedida",
+  DIRECAO_RETOMADA_SEM_PAUSA: "Direção retomada sem pausa de 30 min",
   JORNADA_DIRECAO_PROXIMA_LIMITE: "Jornada de direção perto do limite",
   JORNADA_DIRECAO_EXCEDIDA: "Jornada de direção excedida",
   ESPERA_PROXIMA_LIMITE: "Espera em carga/descarga perto do limite",
@@ -37,6 +38,8 @@ export const ORIENTACAO_TIPO_ALERTA: Record<string, string> = {
     "Você está perto de completar 5h30 de direção contínua sem uma pausa qualificada. Assim que possível, pare com segurança e faça um descanso de pelo menos 30 minutos.",
   DIRECAO_CONTINUA_EXCEDIDA:
     "Você já ultrapassou o limite legal de 5h30 de direção contínua sem pausa. Pare com segurança agora e faça um descanso de pelo menos 30 minutos antes de continuar dirigindo.",
+  DIRECAO_RETOMADA_SEM_PAUSA:
+    "Você retomou a direção depois de 5h30 contínuas sem a pausa de 30 minutos. Isso é perigoso e foi comunicado ao gestor e à equipe de Gerenciamento de Risco. Pare com segurança e descanse pelo menos 30 minutos.",
   JORNADA_DIRECAO_PROXIMA_LIMITE:
     "Você está perto do limite diário de 8h de direção. Planeje encerrar a jornada de direção em breve, dentro do limite legal.",
   JORNADA_DIRECAO_EXCEDIDA:

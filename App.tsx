@@ -76,6 +76,7 @@ import { listarMeusAlertas } from "./src/api/alertas";
 import { verificarVinculoAtivo } from "./src/api/motorista";
 import type { AlertaJornada } from "./src/api/alertas";
 import { AlertaJornadaOverlay } from "./src/components/AlertaJornadaOverlay";
+import { garantirTodosOsCanaisDeVoz } from "./src/notifications/alertaTelaCheia";
 import { verificarPermissoesAlertas } from "./src/notifications/permissoesAlertas";
 import { PermissoesAlertasScreen } from "./src/screens/PermissoesAlertasScreen";
 import { AlertaLocalTelaCheia } from "./src/components/AlertaLocalTelaCheia";
@@ -250,6 +251,8 @@ function AppInterno() {
     iniciarBancoAlertasVisualizadosPendentes();
     iniciarBancoAjusteGestor();
     configurarExibicaoDeNotificacoes();
+    // Canais com a voz de cada alerta (o push do servidor também os usa).
+    void garantirTodosOsCanaisDeVoz();
     Promise.all([obterCredenciais(), temPinCadastrado()]).then(
       ([c, temPin]) => {
         setVinculado(c !== null);

@@ -33,7 +33,12 @@ import {
   formatarHorasMin,
 } from "../domain/regrasJornada";
 import {
+  direcaoContinuaEmCurso,
+  DIRECAO_CONTINUA_CRITICO_MIN,
+} from "../domain/direcaoContinua";
+import {
   inserirRegistro,
+  listarEventosDaJornadaAtual,
   obterMinutosDirecaoDaUltimaJornadaFechada,
   salvarAjusteGestorMaisRecenteSeMaisNovo,
   ultimoRegistroRelevante,
@@ -564,6 +569,38 @@ export function RegistrarPontoScreen({
           );
           return;
         }
+      }
+    }
+
+    // Rodada 175: retomar a direção depois de 5h30 contínuas sem a pausa
+    // de 30 min. Pede confirmação; o servidor gera alerta crítico (gestor
+    // e equipe de GR) quando o registro chega. Com pausa >= 30 min, segue
+    // normal, sem aviso.
+    if (tipoEvento === "INICIO_DIRECAO") {
+      const emCurso = direcaoContinuaEmCurso([
+        ...listarEventosDaJornadaAtual(),
+        {
+          tipoEvento: "INICIO_DIRECAO",
+          timestampEvento: new Date(agoraConfiavel()).toISOString(),
+        },
+      ]);
+      if (emCurso && emCurso.minutosAntes >= DIRECAO_CONTINUA_CRITICO_MIN) {
+        Alert.alert(
+          "Direção contínua acima do limite",
+          `Você já dirigiu ${formatarHorasMin(Math.round(emCurso.minutosAntes))} seguidas sem uma pausa de 30 minutos. ` +
+            `O limite legal é 05:30 e é preciso descansar pelo menos 30 minutos antes de dirigir de novo.\n\n` +
+            `Se continuar, um alerta crítico será enviado ao seu gestor e à equipe de Gerenciamento de Risco.\n\n` +
+            `Você realmente quer iniciar a direção agora?`,
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Sim, iniciar mesmo assim",
+              style: "destructive",
+              onPress: () => void prosseguirComRegistro(tipoEvento, rotulo),
+            },
+          ],
+        );
+        return;
       }
     }
 

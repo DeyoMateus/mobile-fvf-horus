@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppState,
   Modal,
+  NativeModules,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -32,6 +33,26 @@ const PADRAO_VIBRACAO = [0, 800, 400, 800, 400];
  * do alerta, o motorista vê o aviso na hora, sem digitar PIN. Só mostra
  * o texto do alerta (nenhum dado da jornada). Fechar = "Ciente".
  */
+// Rodada 179: módulo nativo (plugins/withTelaSobreBloqueio.js). Pode não
+// existir (Expo Go, build antigo): nesse caso tudo aqui é ignorado.
+const BloqueioTela: {
+  estaBloqueado?: () => Promise<boolean>;
+  voltarParaBloqueio?: () => void;
+} | null = NativeModules.BloqueioTela ?? null;
+
+async function aparelhoBloqueado(): Promise<boolean> {
+  try {
+    return (await BloqueioTela?.estaBloqueado?.()) === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Com o aparelho bloqueado, o app nunca fica utilizável: volta pro bloqueio. */
+async function devolverAoBloqueioSeBloqueado() {
+  if (await aparelhoBloqueado()) BloqueioTela?.voltarParaBloqueio?.();
+}
+
 export function AlertaLocalTelaCheia() {
   const [alerta, setAlerta] = useState<AlertaTela | null>(null);
   const alertaRef = useRef<AlertaTela | null>(null);
@@ -69,7 +90,14 @@ export function AlertaLocalTelaCheia() {
   useEffect(() => {
     void verificar();
     const assinatura = AppState.addEventListener("change", (estado) => {
-      if (estado === "active") void verificar();
+      if (estado === "active") {
+        void verificar();
+        // Rede de segurança: app em primeiro plano com o aparelho
+        // bloqueado e sem alerta na tela = não pode aparecer.
+        setTimeout(() => {
+          if (!alertaRef.current) void devolverAoBloqueioSeBloqueado();
+        }, 1200);
+      }
     });
     const m = carregarNotifee();
     const parar = m?.default.onForegroundEvent(({ type, detail }) => {
@@ -100,6 +128,9 @@ export function AlertaLocalTelaCheia() {
         ?.default.cancelNotification(atual.id)
         .catch(() => undefined);
     }
+    // Alerta aberto por cima do bloqueio: ao fechar, volta pro bloqueio
+    // (o app só pode ser usado depois de desbloquear o aparelho).
+    await devolverAoBloqueioSeBloqueado();
   }
 
   if (!alerta) return null;

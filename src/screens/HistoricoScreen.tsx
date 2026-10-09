@@ -582,6 +582,7 @@ export function HistoricoScreen() {
   return (
     <View style={estilos.container}>
       <FlatList
+        showsVerticalScrollIndicator={false}
         data={historicoMinimizado ? [] : itensExibidos}
         ListHeaderComponent={cabecalhoLista}
         keyboardShouldPersistTaps="handled"

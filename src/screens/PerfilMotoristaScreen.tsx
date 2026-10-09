@@ -98,6 +98,7 @@ export function PerfilMotoristaScreen({
 
   return (
     <ScrollView
+        showsVerticalScrollIndicator={false}
       style={estilos.container}
       contentContainerStyle={estilos.conteudo}
       refreshControl={

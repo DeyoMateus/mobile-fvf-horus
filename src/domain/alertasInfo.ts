@@ -10,6 +10,8 @@ export const ROTULO_TIPO_ALERTA: Record<string, string> = {
   DIRECAO_CONTINUA_PROXIMA_LIMITE: "Direção contínua perto do limite",
   DIRECAO_CONTINUA_EXCEDIDA: "Direção contínua excedida",
   DIRECAO_RETOMADA_SEM_PAUSA: "Direção retomada sem pausa de 30 min",
+  SEQUENCIA_EVENTOS_INCONSISTENTE: "Sequência de registros inconsistente",
+  JORNADA_ABERTA_PROLONGADA: "Jornada aberta há muito tempo",
   JORNADA_DIRECAO_PROXIMA_LIMITE: "Jornada de direção perto do limite",
   JORNADA_DIRECAO_EXCEDIDA: "Jornada de direção excedida",
   ESPERA_PROXIMA_LIMITE: "Espera em carga/descarga perto do limite",
@@ -40,6 +42,10 @@ export const ORIENTACAO_TIPO_ALERTA: Record<string, string> = {
     "Você já ultrapassou o limite legal de 5h30 de direção contínua sem pausa. Pare com segurança agora e faça um descanso de pelo menos 30 minutos antes de continuar dirigindo.",
   DIRECAO_RETOMADA_SEM_PAUSA:
     "Você retomou a direção depois de 5h30 contínuas sem a pausa de 30 minutos. Isso é perigoso e foi comunicado ao gestor e à equipe de Gerenciamento de Risco. Pare com segurança e descanse pelo menos 30 minutos.",
+  SEQUENCIA_EVENTOS_INCONSISTENTE:
+    "Um dos seus registros veio fora da ordem esperada (por exemplo, dois inícios de direção seguidos). O ponto foi aceito, mas o gestor foi avisado para conferir se algum registro ficou faltando.",
+  JORNADA_ABERTA_PROLONGADA:
+    "Sua jornada está aberta há mais de 14 horas. Se você já terminou de trabalhar, encerre a jornada no app. Se esqueceu de encerrar em outro dia, peça um ajuste ao seu gestor.",
   JORNADA_DIRECAO_PROXIMA_LIMITE:
     "Você está perto do limite diário de 8h de direção. Planeje encerrar a jornada de direção em breve, dentro do limite legal.",
   JORNADA_DIRECAO_EXCEDIDA:

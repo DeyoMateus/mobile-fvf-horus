@@ -105,6 +105,7 @@ export function PermissoesAlertasScreen({
 
   return (
     <ScrollView
+        showsVerticalScrollIndicator={false}
       style={estilos.raiz}
       contentContainerStyle={estilos.conteudo}
     >

@@ -872,6 +872,7 @@ export function AjustesEmpresaScreen({
 
   return (
     <FlatList
+        showsVerticalScrollIndicator={false}
       style={estilos.container}
       contentContainerStyle={{
         paddingHorizontal: 20,

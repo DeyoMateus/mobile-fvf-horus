@@ -197,6 +197,22 @@ export function RegistrarPontoScreen({
   } | null>(null);
 
   const cronometroMs = useCronometro(desdeQuando);
+  // Rodada 180: último ponto registrado, mostrado acima do relógio como
+  // "status atual" (relê o SQLite a cada render; `ultimoRelevante` muda a
+  // cada ponto novo, então a tela atualiza sozinha).
+  const ultimoPonto = ultimoRegistroRelevante();
+  const ultimoPontoQuando = ultimoPonto ? new Date(ultimoPonto.timestampEvento) : null;
+  const ultimoPontoTexto =
+    ultimoPontoQuando && !Number.isNaN(ultimoPontoQuando.getTime())
+      ? `${
+          ultimoPontoQuando.toDateString() === new Date().toDateString()
+            ? "hoje"
+            : ultimoPontoQuando.toLocaleDateString("pt-BR")
+        } às ${ultimoPontoQuando.toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      : null;
 
   // Rodada 68 , pedido do usuário: enquanto a jornada está aberta mas
   // nenhuma etapa foi escolhida (direção/descanso/espera), esse tempo
@@ -837,6 +853,7 @@ export function RegistrarPontoScreen({
 
   return (
     <ScrollView
+        showsVerticalScrollIndicator={false}
       contentContainerStyle={estilos.container}
       keyboardShouldPersistTaps="handled"
     >
@@ -862,6 +879,20 @@ export function RegistrarPontoScreen({
           disso (início de jornada, ou qualquer "tempo indefinido" depois
           de fechar uma etapa) não existe cronômetro nenhum , só o aviso
           abaixo, pra não parecer que algo está sendo contado. */}
+      {ultimoPonto && (
+        <View style={estilos.statusAtualCaixa}>
+          <Text style={estilos.statusAtualRotulo}>STATUS ATUAL · ÚLTIMO PONTO</Text>
+          <Text style={estilos.statusAtualTitulo}>
+            {rotuloDoTipo(ultimoPonto.tipoEvento)}
+          </Text>
+          {ultimoPontoTexto && (
+            <Text style={estilos.statusAtualQuando}>
+              registrado {ultimoPontoTexto}
+            </Text>
+          )}
+        </View>
+      )}
+
       {cronometroMs !== null && (
         <View style={estilos.cronometroCaixa}>
           <Text style={estilos.cronometroTexto}>
@@ -1136,6 +1167,35 @@ function criarEstilos(cores: CoresTema) {
       borderColor: cores.borda,
     },
     botaoTemaTexto: { fontSize: 18 },
+    statusAtualCaixa: {
+      backgroundColor: cores.fundoCartao,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: cores.primario,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    statusAtualRotulo: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: cores.textoSecundario,
+    },
+    statusAtualTitulo: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: cores.primario,
+      marginTop: 4,
+      textAlign: "center",
+    },
+    statusAtualQuando: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: cores.texto,
+      marginTop: 2,
+    },
     cronometroCaixa: {
       backgroundColor: cores.fundoCartao,
       borderRadius: 12,

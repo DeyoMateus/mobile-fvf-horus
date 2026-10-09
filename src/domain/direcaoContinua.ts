@@ -30,6 +30,7 @@ export function direcaoContinuaEmCurso(
   let corteMs = -Infinity;
   let inicioDirecao: number | null = null;
   let inicioDescanso: number | null = null;
+  let fimJornada: number | null = null;
   let acumuladoMs = 0;
 
   const eventos = eventosEmOrdemDeToque.slice(0, -1);
@@ -38,7 +39,19 @@ export function direcaoContinuaEmCurso(
     if (Number.isNaN(t)) continue;
     if (e.tipoEvento === "INICIO_DIRECAO") {
       inicioDirecao = t;
-    } else if (e.tipoEvento === "FIM_DIRECAO") {
+    } else if (e.tipoEvento === "INICIO_JORNADA") {
+      // Rodada 182: intervalo entre jornadas encadeadas de 30 min ou mais
+      // conta como pausa; menos que isso não zera.
+      if (
+        fimJornada !== null &&
+        t - fimJornada >= PAUSA_QUALIFICADA_MIN * 60_000
+      ) {
+        corteMs = t;
+        acumuladoMs = 0;
+      }
+      fimJornada = null;
+    } else if (e.tipoEvento === "FIM_DIRECAO" || e.tipoEvento === "FIM_JORNADA") {
+      if (e.tipoEvento === "FIM_JORNADA") fimJornada = t;
       if (inicioDirecao !== null && t > inicioDirecao) {
         acumuladoMs += t - Math.max(inicioDirecao, corteMs);
       }

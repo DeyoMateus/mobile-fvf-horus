@@ -215,7 +215,7 @@ export async function listarRegistros(): Promise<RegistroLocal[]> {
 
 /**
  * Rodada 151 , eventos da jornada atual (a partir do último
- * INICIO_JORNADA, ou das últimas 48h se não houver), na ordem real de
+ * INICIO_JORNADA, recuando por jornadas encadeadas sem 11h de descanso, ou das últimas 48h se não houver), na ordem real de
  * toque. Só campos não sensíveis , usado pelos avisos locais de direção
  * contínua (ver `domain/direcaoContinua.ts`).
  */
@@ -230,9 +230,32 @@ export function listarEventosDaJornadaAtual(): {
     `SELECT tipoEvento, timestampEvento FROM registros_pendentes WHERE status <> 'ERRO' ORDER BY rowid DESC LIMIT 200`,
   );
   const recentes: { tipoEvento: TipoEvento; timestampEvento: string }[] = [];
-  for (const l of linhas) {
+  // Rodada 182: jornadas encadeadas (menos de 11h entre o FIM_JORNADA e o
+  // INICIO_JORNADA seguinte) somam direção, igual ao servidor.
+  const DESCANSO_INTERJORNADA_MS = 11 * 60 * 60_000;
+  for (let i = 0; i < linhas.length; i++) {
+    const l = linhas[i];
     recentes.push(l);
-    if (l.tipoEvento === "INICIO_JORNADA") break;
+    // Rodada 184: 11h ou mais sem nenhum registro (e sem direção em curso)
+    // encerram o ciclo de direção, igual ao servidor.
+    const seguinteMaisAntigo = linhas[i + 1];
+    if (
+      seguinteMaisAntigo &&
+      seguinteMaisAntigo.tipoEvento !== "INICIO_DIRECAO" &&
+      new Date(l.timestampEvento).getTime() -
+        new Date(seguinteMaisAntigo.timestampEvento).getTime() >=
+        DESCANSO_INTERJORNADA_MS
+    ) {
+      break;
+    }
+    if (l.tipoEvento === "INICIO_JORNADA") {
+      const anterior = linhas[i + 1];
+      if (!anterior || anterior.tipoEvento !== "FIM_JORNADA") break;
+      const gap =
+        new Date(l.timestampEvento).getTime() -
+        new Date(anterior.timestampEvento).getTime();
+      if (!(gap >= 0 && gap < DESCANSO_INTERJORNADA_MS)) break;
+    }
   }
   return recentes.reverse();
 }
@@ -250,7 +273,9 @@ export async function obterRegistroPorIdLocal(
 
 export async function listarPendentes(): Promise<RegistroLocal[]> {
   const linhas = db.getAllSync<LinhaBruta>(
-    `SELECT * FROM registros_pendentes WHERE status IN ('PENDENTE', 'ERRO') ORDER BY rowid ASC`,
+    // Rodada 184: ponto recusado pelo servidor é reenviado no máximo
+    // MAX_TENTATIVAS_ERRO vezes, depois fica parado até o gestor ajustar.
+    `SELECT * FROM registros_pendentes WHERE status = 'PENDENTE' OR (status = 'ERRO' AND tentativas < ${MAX_TENTATIVAS_ERRO}) ORDER BY rowid ASC`,
   );
   return Promise.all(linhas.map(paraRegistroLocal));
 }
@@ -262,7 +287,16 @@ export function marcarEnviado(idLocal: string): void {
   );
 }
 
+const MAX_TENTATIVAS_ERRO = 3;
+
 export function marcarErro(idLocal: string, erro: string): void {
+  const atual = db.getFirstSync<{ tentativas: number }>(
+    `SELECT tentativas FROM registros_pendentes WHERE idLocal = ?`,
+    [idLocal],
+  );
+  if ((atual?.tentativas ?? 0) + 1 >= MAX_TENTATIVAS_ERRO) {
+    erro = `${erro} (Não será reenviado automaticamente: peça o ajuste do ponto ao seu gestor.)`;
+  }
   db.runSync(
     `UPDATE registros_pendentes SET status = 'ERRO', tentativas = tentativas + 1, ultimoErro = ? WHERE idLocal = ?`,
     [erro, idLocal],
@@ -369,19 +403,39 @@ export function obterMinutosDirecaoDaUltimaJornadaFechada(): number | null {
     .lastIndexOf("FIM_JORNADA");
   if (idxFimJornada === -1) return null;
 
-  const idxInicioJornada = linhas
+  let idxInicioJornada = linhas
     .slice(0, idxFimJornada)
     .map((l) => l.tipoEvento)
     .lastIndexOf("INICIO_JORNADA");
   if (idxInicioJornada === -1) return null; // não dá pra ter certeza , caiu fora do histórico local
+
+  // Rodada 185: jornadas encadeadas (menos de 11h entre elas) somam a
+  // direção do ciclo, igual ao servidor.
+  while (idxInicioJornada > 0) {
+    const anterior = linhas[idxInicioJornada - 1];
+    if (anterior.tipoEvento !== "FIM_JORNADA") break;
+    const gapMs =
+      new Date(linhas[idxInicioJornada].timestampEvento).getTime() -
+      new Date(anterior.timestampEvento).getTime();
+    if (!(gapMs >= 0 && gapMs < 11 * 60 * 60_000)) break;
+    const inicioAnterior = linhas
+      .slice(0, idxInicioJornada - 1)
+      .map((l) => l.tipoEvento)
+      .lastIndexOf("INICIO_JORNADA");
+    if (inicioAnterior === -1) break;
+    idxInicioJornada = inicioAnterior;
+  }
 
   const jornada = linhas.slice(idxInicioJornada, idxFimJornada + 1);
   let totalMin = 0;
   let abertoEm: number | null = null;
   for (const l of jornada) {
     if (l.tipoEvento === "INICIO_DIRECAO") {
-      abertoEm = new Date(l.timestampEvento).getTime();
-    } else if (l.tipoEvento === "FIM_DIRECAO" && abertoEm !== null) {
+      if (abertoEm === null) abertoEm = new Date(l.timestampEvento).getTime();
+    } else if (
+      (l.tipoEvento === "FIM_DIRECAO" || l.tipoEvento === "FIM_JORNADA") &&
+      abertoEm !== null
+    ) {
       totalMin += (new Date(l.timestampEvento).getTime() - abertoEm) / 60000;
       abertoEm = null;
     }

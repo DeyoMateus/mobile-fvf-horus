@@ -141,6 +141,7 @@ export function OnboardingScreen({ onVinculado }: { onVinculado: () => void }) {
 
   return (
     <ScrollView
+        showsVerticalScrollIndicator={false}
       style={{ backgroundColor: cores.fundo }}
       contentContainerStyle={estilos.container}
       keyboardShouldPersistTaps="handled"

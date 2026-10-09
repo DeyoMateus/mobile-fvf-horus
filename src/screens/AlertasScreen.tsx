@@ -240,6 +240,7 @@ export function AlertasScreen({
       </View>
 
       <FlatList
+        showsVerticalScrollIndicator={false}
         data={minimizado ? [] : alertasExibidos}
         keyExtractor={(item) => item.id}
         refreshControl={

@@ -1,4 +1,9 @@
 import { tocarVozDoAlertaAgora } from "../notifications/alertaTelaCheia";
+import {
+  alarmeNativoDisponivel,
+  iniciarAlarmeDaTela,
+  pararAlarmeDaTela,
+} from "../notifications/alarmeNativo";
 import { somDoTipoDeAlerta } from "../notifications/sonsAlerta";
 import { useEffect } from "react";
 import { renderizarHorarios } from "../utils/horariosMensagem";
@@ -67,6 +72,12 @@ export function AlertaJornadaOverlay({
 
   useEffect(() => {
     if (silenciado) return;
+    // Rodada 195: com o módulo nativo, vibração e voz saem como ALARME
+    // (tocam mesmo no modo silencioso). Sem ele, comportamento antigo.
+    if (alarmeNativoDisponivel()) {
+      iniciarAlarmeDaTela(somDoTipoDeAlerta(alerta.tipo), PADRAO_VIBRACAO);
+      return () => pararAlarmeDaTela();
+    }
     Vibration.vibrate(PADRAO_VIBRACAO, true);
     let limparSom: () => void = () => {};
     let desmontado = false;

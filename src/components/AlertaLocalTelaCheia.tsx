@@ -6,17 +6,25 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  Vibration,
   View,
 } from "react-native";
 import {
   carregarNotifee,
   MARCA_TELA_CHEIA,
 } from "../notifications/alertaTelaCheia";
+import {
+  alertaNativoAtivo,
+  iniciarAlarmeDaTela,
+  pararAlarmeDaTela,
+} from "../notifications/alarmeNativo";
+import type { SomAlerta } from "../notifications/sonsAlerta";
 import { agoraConfiavel } from "../utils/relogioConfiavel";
 
 interface AlertaTela {
   id: string;
+  /** true = veio do alarme nativo (ele mesmo já toca voz e vibração). */
+  nativo?: boolean;
+  som: SomAlerta;
   titulo: string;
   corpo: string;
 }
@@ -59,6 +67,28 @@ export function AlertaLocalTelaCheia() {
   alertaRef.current = alerta;
 
   const verificar = useCallback(async () => {
+    // Rodada 196: alarme nativo (serviço) que disparou e ainda não teve ciente.
+    const nativo = await alertaNativoAtivo();
+    if (nativo) {
+      if (
+        Number.isFinite(nativo.quando) &&
+        nativo.quando > 0 &&
+        agoraConfiavel() - nativo.quando > VALIDADE_MS
+      ) {
+        pararAlarmeDaTela();
+      } else {
+        if (alertaRef.current?.id !== nativo.id) {
+          setAlerta({
+            id: nativo.id,
+            nativo: true,
+            som: nativo.som,
+            titulo: nativo.titulo,
+            corpo: nativo.corpo,
+          });
+        }
+        return;
+      }
+    }
     const m = carregarNotifee();
     if (!m) return;
     try {
@@ -77,6 +107,7 @@ export function AlertaLocalTelaCheia() {
         if (alertaRef.current?.id === n.id) return;
         setAlerta({
           id: n.id,
+          som: (String(n.data?.som ?? "generico") as SomAlerta),
           titulo: String(n.title ?? "Alerta de jornada"),
           corpo: String(n.body ?? ""),
         });
@@ -89,6 +120,11 @@ export function AlertaLocalTelaCheia() {
 
   useEffect(() => {
     void verificar();
+    // O alarme nativo pode abrir o app que já está aberto (sem mudar o
+    // AppState): confere a cada 2 s se há alerta ativo.
+    const timer = setInterval(() => {
+      if (!alertaRef.current) void verificar();
+    }, 2000);
     const assinatura = AppState.addEventListener("change", (estado) => {
       if (estado === "active") {
         void verificar();
@@ -109,21 +145,26 @@ export function AlertaLocalTelaCheia() {
       }
     });
     return () => {
+      clearInterval(timer);
       assinatura.remove();
       parar?.();
     };
   }, [verificar]);
 
   useEffect(() => {
-    if (!alerta) return;
-    Vibration.vibrate(PADRAO_VIBRACAO, true);
-    return () => Vibration.cancel();
+    if (!alerta || alerta.nativo) return;
+    // Rodada 195: alarme nativo (USAGE_ALARM) toca mesmo no modo
+    // silencioso. A voz entra 3,5 s depois para não sobrepor a da
+    // notificação que acabou de tocar.
+    iniciarAlarmeDaTela(alerta.som, PADRAO_VIBRACAO, 3500);
+    return () => pararAlarmeDaTela();
   }, [alerta]);
 
   async function ciente() {
     const atual = alerta;
     setAlerta(null);
-    if (atual) {
+    if (atual?.nativo) pararAlarmeDaTela();
+    if (atual && !atual.nativo) {
       await carregarNotifee()
         ?.default.cancelNotification(atual.id)
         .catch(() => undefined);

@@ -6,6 +6,11 @@ import {
   TODOS_OS_SONS,
 } from "./sonsAlerta";
 import type { SomAlerta } from "./sonsAlerta";
+import {
+  agendamentoNativoDisponivel,
+  agendarAlarmeNativo,
+  cancelarAlarmeNativo,
+} from "./alarmeNativo";
 
 /**
  * Alerta de TELA CHEIA sobre o bloqueio (estilo ligação/alarme) para os
@@ -114,8 +119,17 @@ export async function agendarAlertaLocal(
   if (!m) return;
   const cfg = await m.default.getNotificationSettings();
   if (cfg.authorizationStatus !== m.AuthorizationStatus.AUTHORIZED) return;
-  await garantirCanalDoSom(m, a.som);
   await conferirPermissaoDeAlarme(m);
+  // Rodada 196: com o módulo nativo, TODO aviso vira alarme (serviço em
+  // primeiro plano + voz/vibração em loop + tela vermelha por cima de
+  // qualquer app ou do bloqueio), até o motorista dar "Ciente".
+  if (
+    agendamentoNativoDisponivel() &&
+    (await agendarAlarmeNativo(a.id, a.quandoMs, a.titulo, a.corpo, a.som))
+  ) {
+    return;
+  }
+  await garantirCanalDoSom(m, a.som);
   await m.default.createTriggerNotification(
     {
       id: a.id,
@@ -123,6 +137,7 @@ export async function agendarAlertaLocal(
       body: a.corpo,
       data: {
         tela: a.telaCheia ? MARCA_TELA_CHEIA : "0",
+        som: a.som,
         quando: String(a.quandoMs),
       },
       android: {
@@ -149,6 +164,7 @@ export async function agendarAlertaLocal(
 
 /** Cancela agendado e/ou já exibido com este id. */
 export async function cancelarAlertaLocal(id: string): Promise<void> {
+  cancelarAlarmeNativo(id);
   const m = carregarNotifee();
   if (!m) return;
   await m.default.cancelNotification(id).catch(() => undefined);

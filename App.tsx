@@ -322,7 +322,7 @@ function AppInterno() {
         // Só LIGA a tela de permissões aqui; quem a fecha é a própria tela
         // (passo a passo, inclusive a bateria), não a volta das configurações.
         void verificarPermissoesAlertas().then((e) =>
-          setFaltaPermissaoAlertas((atual) => atual || !e.tudoOk),
+          setFaltaPermissaoAlertas((atual) => atual || e.pendente),
         );
         // Aparelho novo que ainda não conseguiu restaurar o histórico do
         // servidor (estava sem rede): tenta de novo ao voltar pro app.
@@ -362,7 +362,7 @@ function AppInterno() {
     // Notificações, alarmes e tela cheia são obrigatórios: sem eles o app
     // mostra a tela de permissões (PermissoesAlertasScreen) em vez do uso.
     void verificarPermissoesAlertas().then((e) => {
-      setFaltaPermissaoAlertas((atual) => atual || !e.tudoOk);
+      setFaltaPermissaoAlertas((atual) => atual || e.pendente);
       if (e.tudoOk) void sincronizarLembretesDeJornada();
     });
     void restaurarSeAparelhoNovo().then((n) => {

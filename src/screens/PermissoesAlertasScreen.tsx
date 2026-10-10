@@ -12,7 +12,10 @@ import {
   permitirAlarmes,
   permitirBateriaLivre,
   permitirNotificacoes,
+  permitirSobreporApps,
   permitirTelaCheia,
+  pularPermissoesRecomendadas,
+  recomendadasForamPuladas,
   verificarPermissoesAlertas,
 } from "../notifications/permissoesAlertas";
 import type { EstadoPermissoesAlertas } from "../notifications/permissoesAlertas";
@@ -44,7 +47,7 @@ export function PermissoesAlertasScreen({
   const [estado, setEstado] = useState<EstadoPermissoesAlertas | null>(null);
   // O passo da bateria é recomendado (não bloqueia): o motorista pode
   // pular com "Agora não".
-  const [pulouBateria, setPulouBateria] = useState(false);
+  const pulouBateria = recomendadasForamPuladas();
 
   // Um passo por vez: só conclui quando as obrigatórias estão ok E a
   // bateria foi liberada ou pulada (antes, a tela fechava assim que a
@@ -52,7 +55,9 @@ export function PermissoesAlertasScreen({
   const conferir = useCallback(async () => {
     const e = await verificarPermissoesAlertas();
     setEstado(e);
-    if (e.tudoOk && (e.bateriaLivre || pulouBateria)) onConcluido();
+    if (e.tudoOk && ((e.bateriaLivre && e.sobrepor) || pulouBateria)) {
+      onConcluido();
+    }
   }, [onConcluido, pulouBateria]);
 
   useEffect(() => {
@@ -96,6 +101,16 @@ export function PermissoesAlertasScreen({
       obrigatorio: EXIGIR_TELA_CHEIA,
       acao: permitirTelaCheia,
       textoBotao: "Abrir configurações do app",
+    },
+    {
+      chave: "sobrepor",
+      titulo: "Exibir sobre outros apps (recomendado)",
+      explicacao:
+        "Para o alerta aparecer na tela como uma chamada ou despertador, mesmo se você estiver usando outro aplicativo (como o GPS). Na tela que abrir, ative a opção para este app.",
+      ok: estado.sobrepor,
+      obrigatorio: false,
+      acao: permitirSobreporApps,
+      textoBotao: "Permitir exibir sobre outros apps",
     },
     {
       chave: "bateria",
@@ -142,7 +157,7 @@ export function PermissoesAlertasScreen({
           {!passoAtual.obrigatorio && (
             <TouchableOpacity
               onPress={() => {
-                setPulouBateria(true);
+                pularPermissoesRecomendadas();
                 onConcluido();
               }}
             >

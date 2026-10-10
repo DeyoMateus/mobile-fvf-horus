@@ -2,6 +2,7 @@ import * as Device from "expo-device";
 import { Linking, Platform } from "react-native";
 import { rodandoNoExpoGo } from "../utils/ambiente";
 import { carregarNotifee } from "./alertaTelaCheia";
+import { abrirSobreporApps, podeSobreporApps } from "./alarmeNativo";
 
 type NotificationsModulo = typeof import("expo-notifications");
 
@@ -16,13 +17,31 @@ type NotificationsModulo = typeof import("expo-notifications");
  */
 export const EXIGIR_TELA_CHEIA = true;
 
+// "Agora não" nas permissões recomendadas vale só até fechar o app: na
+// próxima abertura a tela volta a pedir, em cascata, até concederem.
+let opcionaisPuladas = false;
+export function pularPermissoesRecomendadas(): void {
+  opcionaisPuladas = true;
+}
+export function recomendadasForamPuladas(): boolean {
+  return opcionaisPuladas;
+}
+
 export interface EstadoPermissoesAlertas {
   notificacoes: boolean;
   alarmes: boolean;
   telaCheia: boolean;
   bateriaLivre: boolean; // recomendada, não bloqueia
+  /** "Exibir sobre outros apps": recomendada, não bloqueia. */
+  sobrepor: boolean;
   /** true = tudo que é obrigatório está concedido. */
   tudoOk: boolean;
+  /**
+   * true = falta algo a pedir: obrigatória pendente OU recomendada
+   * (bateria, sobrepor apps) ainda não concedida e não pulada nesta
+   * abertura do app. É o que faz a tela de permissões REAPARECER.
+   */
+  pendente: boolean;
   /** true = não se aplica (Expo Go, emulador, iOS): não bloqueia. */
   naoSeAplica: boolean;
 }
@@ -32,7 +51,9 @@ const NAO_SE_APLICA: EstadoPermissoesAlertas = {
   alarmes: true,
   telaCheia: true,
   bateriaLivre: true,
+  sobrepor: true,
   tudoOk: true,
+  pendente: false,
   naoSeAplica: true,
 };
 
@@ -58,12 +79,17 @@ export async function verificarPermissoesAlertas(): Promise<EstadoPermissoesAler
         m.AndroidNotificationSetting.DISABLED;
       bateriaLivre = !(await m.default.isBatteryOptimizationEnabled());
     }
+    const sobrepor = await podeSobreporApps();
+    const tudoOk = notificacoes && alarmes && (telaCheia || !EXIGIR_TELA_CHEIA);
     return {
       notificacoes,
       alarmes,
       telaCheia,
       bateriaLivre,
-      tudoOk: notificacoes && alarmes && (telaCheia || !EXIGIR_TELA_CHEIA),
+      sobrepor,
+      tudoOk,
+      pendente:
+        !tudoOk || (!opcionaisPuladas && (!bateriaLivre || !sobrepor)),
       naoSeAplica: false,
     };
   } catch {
@@ -96,4 +122,9 @@ export async function permitirTelaCheia(): Promise<void> {
 
 export async function permitirBateriaLivre(): Promise<void> {
   await carregarNotifee()?.default.openBatteryOptimizationSettings();
+}
+
+/** Abre "Exibir sobre outros apps" deste app (tela do alerta por cima de tudo). */
+export async function permitirSobreporApps(): Promise<void> {
+  abrirSobreporApps();
 }

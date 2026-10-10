@@ -42,12 +42,18 @@ export function PermissoesAlertasScreen({
   const { cores } = useTema();
   const estilos = criarEstilos(cores);
   const [estado, setEstado] = useState<EstadoPermissoesAlertas | null>(null);
+  // O passo da bateria é recomendado (não bloqueia): o motorista pode
+  // pular com "Agora não".
+  const [pulouBateria, setPulouBateria] = useState(false);
 
+  // Um passo por vez: só conclui quando as obrigatórias estão ok E a
+  // bateria foi liberada ou pulada (antes, a tela fechava assim que a
+  // última obrigatória era concedida e a bateria nunca era pedida).
   const conferir = useCallback(async () => {
     const e = await verificarPermissoesAlertas();
     setEstado(e);
-    if (e.tudoOk) onConcluido();
-  }, [onConcluido]);
+    if (e.tudoOk && (e.bateriaLivre || pulouBateria)) onConcluido();
+  }, [onConcluido, pulouBateria]);
 
   useEffect(() => {
     void conferir();
@@ -95,13 +101,16 @@ export function PermissoesAlertasScreen({
       chave: "bateria",
       titulo: "Bateria sem restrição (recomendado)",
       explicacao:
-        "Evita que o Android segure os alertas quando o app está fechado.",
+        "Evita que o Android segure os alertas quando o app está fechado. Na lista que abrir, procure este app e escolha \"Não otimizar\" / \"Sem restrições\".",
       ok: estado.bateriaLivre,
       obrigatorio: false,
       acao: permitirBateriaLivre,
       textoBotao: "Liberar bateria",
     },
   ];
+
+  // Primeiro passo ainda pendente (ordem da lista); a bateria vem por último.
+  const passoAtual = itens.find((i) => !i.ok);
 
   return (
     <ScrollView
@@ -114,27 +123,33 @@ export function PermissoesAlertasScreen({
         Para o app te avisar na hora certa durante a viagem, precisamos destas
         permissões. Sem elas o app não pode ser usado.
       </Text>
-      {itens.map((i) => (
-        <View key={i.chave} style={estilos.cartao}>
-          <Text style={estilos.cartaoTitulo}>
-            {i.ok ? "✅ " : i.obrigatorio ? "⛔ " : "⚠️ "}
-            {i.titulo}
+      {passoAtual && (
+        <View key={passoAtual.chave} style={estilos.cartao}>
+          <Text style={estilos.passo}>
+            Passo {itens.indexOf(passoAtual) + 1} de {itens.length}
           </Text>
-          <Text style={estilos.cartaoTexto}>{i.explicacao}</Text>
-          {!i.ok && (
+          <Text style={estilos.cartaoTitulo}>
+            {passoAtual.obrigatorio ? "⛔ " : "⚠️ "}
+            {passoAtual.titulo}
+          </Text>
+          <Text style={estilos.cartaoTexto}>{passoAtual.explicacao}</Text>
+          <TouchableOpacity
+            style={estilos.botao}
+            onPress={() => void passoAtual.acao().then(conferir)}
+          >
+            <Text style={estilos.botaoTexto}>{passoAtual.textoBotao}</Text>
+          </TouchableOpacity>
+          {!passoAtual.obrigatorio && (
             <TouchableOpacity
-              style={estilos.botao}
-              onPress={() => void i.acao().then(conferir)}
+              onPress={() => {
+                setPulouBateria(true);
+                onConcluido();
+              }}
             >
-              <Text style={estilos.botaoTexto}>{i.textoBotao}</Text>
+              <Text style={estilos.pular}>Agora não</Text>
             </TouchableOpacity>
           )}
         </View>
-      ))}
-      {!estado.tudoOk ? null : (
-        <TouchableOpacity style={estilos.botao} onPress={onConcluido}>
-          <Text style={estilos.botaoTexto}>Continuar</Text>
-        </TouchableOpacity>
       )}
     </ScrollView>
   );
@@ -164,5 +179,12 @@ function criarEstilos(cores: CoresTema) {
       marginTop: 4,
     },
     botaoTexto: { color: cores.primarioTexto, fontWeight: "700" },
+    passo: { fontSize: 12, fontWeight: "700", color: cores.textoSecundario },
+    pular: {
+      color: cores.textoSecundario,
+      textAlign: "center",
+      paddingVertical: 10,
+      fontSize: 14,
+    },
   });
 }

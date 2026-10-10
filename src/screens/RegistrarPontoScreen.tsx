@@ -353,19 +353,54 @@ export function RegistrarPontoScreen({
     precisaoGpsM?: number;
     timestampGpsMs?: number;
   }> {
-    try {
-      // Rodada 177: o fix de GPS tinha espera ilimitada (a tela ficava
-      // presa em "Registrando ponto..." dentro de galpão/garagem). Agora
-      // espera no máximo 15 s; sem fix, o ponto segue sem coordenadas,
-      // como já era o comportamento quando o GPS falhava.
-      const posicao = await Promise.race([
-        Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        }),
+    // Rodada 190: uma única tentativa (precisão equilibrada, 15 s) falhava
+    // com frequência em cold start/garagem e o ponto saía sem coordenadas
+    // mesmo com a localização ligada. Agora tenta em camadas:
+    // 1) fix novo (precisão equilibrada, até 10 s);
+    // 2) fix novo por rede/baixa precisão (até 6 s);
+    // 3) última posição conhecida (até 5 min), SEM usar o horário dela
+    //    como horário do evento (o relógio do GPS só vale para fix novo).
+    const comTempo = <T,>(p: Promise<T>, ms: number) =>
+      Promise.race([
+        p,
         new Promise<never>((_, rejeitar) =>
-          setTimeout(() => rejeitar(new Error("gps-timeout")), 15000),
+          setTimeout(() => rejeitar(new Error("gps-timeout")), ms),
         ),
       ]);
+    let posicao: Awaited<ReturnType<typeof Location.getCurrentPositionAsync>> | null =
+      null;
+    for (const [precisao, ms] of [
+      [Location.Accuracy.Balanced, 10000],
+      [Location.Accuracy.Low, 6000],
+    ] as const) {
+      try {
+        posicao = await comTempo(
+          Location.getCurrentPositionAsync({ accuracy: precisao }),
+          ms,
+        );
+        break;
+      } catch {
+        // tenta a próxima camada
+      }
+    }
+    if (!posicao) {
+      try {
+        const antiga = await Location.getLastKnownPositionAsync({
+          maxAge: 5 * 60_000,
+        });
+        if (antiga) {
+          return {
+            latitude: antiga.coords.latitude,
+            longitude: antiga.coords.longitude,
+            precisaoGpsM: antiga.coords.accuracy ?? undefined,
+          };
+        }
+      } catch {
+        // sem última posição
+      }
+      return {};
+    }
+    try {
       // Rodada 73 , pedido do usuário: o horário do evento não pode
       // confiar só no relógio do sistema do aparelho (fácil de
       // adiantar/atrasar manualmente). `posicao.timestamp` vem do
